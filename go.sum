@@ -1,0 +1,6 @@
+github.com/paulfdunn/goutil v1.0.1 h1:Nj74V2yVdYp5a6qrzYzcgBn1PjRqq7yV/GJCenT6/sI=
+github.com/paulfdunn/goutil v1.0.1/go.mod h1:bkQDv9kiAAqV5Ok1EolNUiC3vdjndtM4patIwal+dNw=
+github.com/paulfdunn/httph v1.0.1 h1:fvSzPoRTAxvV70nmK84tXQJm2Q4XxMrSrEqgR6HfxF0=
+github.com/paulfdunn/httph v1.0.1/go.mod h1:EjEgZwjlwzHrmWYrDcphM5S+sjI3GCeVbF/GDBJNjIA=
+github.com/paulfdunn/logh v1.0.0 h1:e18++q3hFn8oe/1XlSWCHOYKYEligF/ErblkkzFeet4=
+github.com/paulfdunn/logh v1.0.0/go.mod h1:ssWlcOLLlVWXG4AY+1oB/0MOVdahgfVibvia7s6uwzc=

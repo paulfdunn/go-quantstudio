@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>go-quantstudio</title>
+		<script src="/plotly-2.16.1.min.js"></script>
+		<script src="/chart.js"></script>
+		<style>
+				#symbol {
+					width: 6em;
+				}
+				#chart {
+					width: 1200px;
+					height: 1200px;
+				}
+		</style>
+	</head>
+	<body>
+		<h3>go-quantstudio</h3>
+		Symbol: <input id="symbol"> <button id="process">Process</button>
+		<hr />
+		<div id="chart"></div>
+	</body>
+	<script>
+		var input = document.getElementById("symbol");
+		input.addEventListener("keypress", function(event) {
+		  if (event.key === "Enter") {
+			event.preventDefault();
+			document.getElementById("process").click();
+		  }
+		});
+	</script>
+</html>
