@@ -1,6 +1,7 @@
 async function updateChart() {
     let symbol = document.getElementById('symbol').value;
-    let resp = await fetch('/plotly?symbol=' + symbol);
+    let maLength = document.getElementById('maLength').value;
+    let resp = await fetch('/plotly?symbol=' + symbol + '&maLength=' + maLength);
     let reply = await resp.json(); 
     Plotly.newPlot('chart', reply.data, reply.layout);
 }

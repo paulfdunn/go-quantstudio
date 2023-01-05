@@ -6,7 +6,12 @@
 		<script src="/chart.js"></script>
 		<style>
 				#symbol {
-					width: 6em;
+					width: 4em;
+					margin-right: 2em;
+				}
+				#maLength {
+					width: 4em;
+					margin-right: 2em;
 				}
 				#chart {
 					width: 1200px;
@@ -16,13 +21,20 @@
 	</head>
 	<body>
 		<h3>go-quantstudio</h3>
-		Symbol: <input id="symbol"> <button id="process">Process</button>
+		Symbol: <input id="symbol" value="spy" >  MaLength: <input id="maLength" value="200"><button id="process">Process</button>
 		<hr />
 		<div id="chart"></div>
 	</body>
 	<script>
-		var input = document.getElementById("symbol");
-		input.addEventListener("keypress", function(event) {
+		var inputSymbol = document.getElementById("symbol");
+		inputSymbol.addEventListener("keypress", function(event) {
+		  if (event.key === "Enter") {
+			event.preventDefault();
+			document.getElementById("process").click();
+		  }
+		});
+		var inputMALength = document.getElementById("maLength");
+		inputMALength.addEventListener("keypress", function(event) {
 		  if (event.key === "Enter") {
 			event.preventDefault();
 			document.getElementById("process").click();

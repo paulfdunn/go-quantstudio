@@ -13,6 +13,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"strings"
 
 	"github.com/paulfdunn/go-quantstudio/downloader"
@@ -24,6 +25,9 @@ import (
 const (
 	appName = "go-quantstudio"
 	guiPort = ":8080"
+
+	maLengthDefault = 200
+	maSplitDefault  = 0.05
 )
 
 var (
@@ -105,26 +109,29 @@ func main() {
 		return
 	}
 
-	// maLength := []int{80, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260}
-	maLength := []int{200}
-	maSplit := 0.05
-	var qGroup *quant.Group
-	for i := range maLength {
-		qGroup = quant.Run(group, maLength[i], maSplit)
-	}
-
 	// adapted from https://github.com/353words/stocks/blob/main/index.html
 	fsSub, err := fs.Sub(staticFS, "assets")
 	if err != nil {
 		logh.Map[appName].Printf(logh.Error, "error calling fs.Sub: %+v", err)
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
-	http.HandleFunc("/plotly", wrappedPlotlyHandler(qGroup))
+	http.HandleFunc("/plotly", wrappedPlotlyHandler(group))
 
 	if *startGUIPtr {
 		logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+guiPort+",  CTRL-C to stop")
 		if err := http.ListenAndServe(guiPort, nil); err != nil {
 			log.Fatal(err)
+		}
+	} else {
+		// maLength := []int{50, 60, 70, 80, 90, 100}
+		// maLength := []int{80, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260}
+		maLength := []int{maLengthDefault}
+		// maSplit := []float64{0.03, 0.04, 0.05, 0.06, 0.07}
+		maSplit := []float64{maSplitDefault}
+		for i := range maLength {
+			for j := range maSplit {
+				quant.Run(group, maLength[i], maSplit[j])
+			}
 		}
 	}
 
@@ -134,9 +141,16 @@ func main() {
 	}
 }
 
-func wrappedPlotlyHandler(qGroup *quant.Group) http.HandlerFunc {
+func wrappedPlotlyHandler(group *downloader.Group) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		symbol := r.URL.Query().Get("symbol")
+		mal := r.URL.Query().Get("maLength")
+		maLength, err := strconv.Atoi(mal)
+		if err != nil {
+			logh.Map[appName].Printf(logh.Error, "error converting maLength value '%s' to int", mal)
+			return
+		}
+		qGroup := quant.Run(group, maLength, maSplitDefault)
 		symbolIndex := -1
 		for i, v := range qGroup.Issues {
 			if strings.EqualFold(v.DownloaderIssue.Symbol, symbol) {
