@@ -28,3 +28,5 @@ Usage of ./go-quantstudio:
   -symbolCSVList string
     	Comma separated list of symbols for which to download prices (default "dia,spy,qqq")
 ```
+
+![GO QuantStudio](./docs/go-quantstudio.png)

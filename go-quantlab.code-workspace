@@ -1,14 +1,7 @@
 {
-	"folders": [
+    "folders": [
 		{
 			"path": "."
-		},
-		{
-			"path": "../goutil"
-		},
-		{
-			"path": "../httph"
 		}
-	],
-	"settings": {}
+	]
 }

@@ -18,18 +18,22 @@ type Issue struct {
 }
 
 type Quant struct {
-	PriceMA     []float64
-	PriceMAHigh []float64
-	PriceMALow  []float64
-	TradeMA     []int
-	TradeGain   []float64
+	PriceNormalizedClose []float64
+	PriceNormalizedHigh  []float64
+	PriceNormalizedLow   []float64
+	PriceNormalizedOpen  []float64
+	PriceMA              []float64
+	PriceMAHigh          []float64
+	PriceMALow           []float64
+	TradeMA              []int
+	TradeGain            []float64
 }
 
 const (
 	DateFormat = "2006-01-02"
 
-	buy  = 10
-	sell = 1
+	Buy  = 1
+	Sell = 0
 )
 
 var (
@@ -49,16 +53,28 @@ func Run(downloaderGroup *downloader.Group, maLength int, maSplit float64) *Grou
 	group.Issues = make([]Issue, len(downloaderGroup.Issues))
 
 	for i := range downloaderGroup.Issues {
+		priceNormalizedClose := multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
+			downloaderGroup.Issues[i].DatasetAsColumns.AdjClose)
+		priceNormalizedHigh := multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
+			downloaderGroup.Issues[i].DatasetAsColumns.AdjHigh)
+		priceNormalizedLow := multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
+			downloaderGroup.Issues[i].DatasetAsColumns.AdjLow)
+		priceNormalizedOpen := multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
+			downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen)
 		priceMA := ma(maLength, true, downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen,
 			downloaderGroup.Issues[i].DatasetAsColumns.AdjClose)
+		priceMA = multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
+			priceMA)
 		priceMALow := multiplySlice(1.0-maSplit, priceMA)
 		priceMAHigh := multiplySlice(1.0+maSplit, priceMA)
-		tradeMA := tradeMA(maLength, downloaderGroup.Issues[i].DatasetAsColumns.AdjClose,
-			priceMA, priceMAHigh, priceMALow)
+		tradeMA := tradeMA(maLength, priceNormalizedClose, priceMA, priceMAHigh, priceMALow)
 		// tradeMA = tradeAddStop(tradeMA, downloaderGroup.Issues[i])
 		_, tradeGain := tradeGainMA(maLength, tradeMA, downloaderGroup.Issues[i])
 		group.Issues[i] = Issue{DownloaderIssue: &downloaderGroup.Issues[i],
-			QuantsetAsColumns: Quant{PriceMA: priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
+			QuantsetAsColumns: Quant{PriceNormalizedClose: priceNormalizedClose,
+				PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
+				PriceNormalizedOpen: priceNormalizedOpen,
+				PriceMA:             priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
 				TradeMA: tradeMA, TradeGain: tradeGain}}
 	}
 
@@ -162,15 +178,15 @@ func tradeMA(maLength int, close, priceMA, priceMAHigh, priceMALow []float64) []
 	out := make([]int, len(priceMA))
 	for i := range priceMA {
 		if i <= maLength {
-			out[i] = sell
+			out[i] = Sell
 			continue
 		}
 
 		switch {
 		case close[i] > priceMAHigh[i]:
-			out[i] = buy
+			out[i] = Buy
 		case close[i] < priceMALow[i]:
-			out[i] = sell
+			out[i] = Sell
 		default:
 			out[i] = out[i-1]
 		}
@@ -187,7 +203,7 @@ func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
 	stopTriggeredIndex := 0
 	for i := 1; i < len(trade); i++ {
 		if stopTriggered {
-			tradeOut[i] = sell
+			tradeOut[i] = Sell
 			highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
 			if i > stopTriggeredIndex+stopLossDelay {
 				stopTriggered = false
@@ -196,11 +212,11 @@ func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
 		}
 
 		switch {
-		case trade[i-1] == buy && trade[i] == buy:
+		case trade[i-1] == Buy && trade[i] == Buy:
 			if dlIssue.DatasetAsColumns.AdjClose[i] > highCloseSinceBuy {
 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
 			}
-		case trade[i-1] == sell && trade[i] == buy:
+		case trade[i-1] == Sell && trade[i] == Buy:
 			if i == len(trade)-1 {
 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
 			} else {
@@ -209,10 +225,10 @@ func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
 		}
 
 		tradeOut[i] = trade[i]
-		if trade[i] == buy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
+		if trade[i] == Buy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
 			stopTriggered = true
 			stopTriggeredIndex = i
-			tradeOut[i] = sell
+			tradeOut[i] = Sell
 		}
 	}
 
@@ -232,7 +248,7 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (gain floa
 		}
 
 		switch {
-		case trade[i-1] == sell && trade[i] == buy:
+		case trade[i-1] == Sell && trade[i] == Buy:
 			tradeGain[i] = tradeGain[i-1]
 			if i == seriesLen-1 {
 				logh.Map[appName].Println(logh.Info, "**** TRADE TOMOROWW ****")
@@ -242,9 +258,9 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (gain floa
 			textOut = fmt.Sprintf("date: %s, symbol: %s, buyPrice: %8.2f, ",
 				dlIssue.DatasetAsColumns.Date[i].Format(DateFormat),
 				dlIssue.Symbol, buyPrice)
-		case trade[i-1] == buy && trade[i] == buy:
+		case trade[i-1] == Buy && trade[i] == Buy:
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
-		case trade[i-1] == buy && trade[i] == sell:
+		case trade[i-1] == Buy && trade[i] == Sell:
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
 			textOut += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
 			if i == seriesLen-1 {
@@ -261,7 +277,7 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (gain floa
 			textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f", dlIssue.DatasetAsColumns.AdjOpen[i+1], thisGain)
 			logh.Map[appName].Printf(logh.Info, "%s", textOut)
 			textOut = ""
-		case trade[i-1] == sell && trade[i] == sell:
+		case trade[i-1] == Sell && trade[i] == Sell:
 			tradeGain[i] = tradeGain[i-1]
 		}
 	}

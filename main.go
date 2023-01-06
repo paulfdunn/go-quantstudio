@@ -179,10 +179,10 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 		"data": []map[string]interface{}{
 			{
 				"x":     qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"high":  qIssue.DownloaderIssue.DatasetAsColumns.AdjHigh,
-				"low":   qIssue.DownloaderIssue.DatasetAsColumns.AdjLow,
-				"open":  qIssue.DownloaderIssue.DatasetAsColumns.AdjOpen,
-				"close": qIssue.DownloaderIssue.DatasetAsColumns.AdjClose,
+				"high":  qIssue.QuantsetAsColumns.PriceNormalizedHigh,
+				"low":   qIssue.QuantsetAsColumns.PriceNormalizedLow,
+				"open":  qIssue.QuantsetAsColumns.PriceNormalizedOpen,
+				"close": qIssue.QuantsetAsColumns.PriceNormalizedClose,
 				"name":  "Prices",
 				"type":  "candlestick",
 				// "xaxis": "x2",
@@ -239,10 +239,10 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 				"x": qIssue.DownloaderIssue.DatasetAsColumns.Date,
 				// "y":     qIssue.DownloaderIssue.DatasetAsColumns.Volume,
 				// "name":  "Volume",
-				"y":     qIssue.QuantsetAsColumns.TradeGain,
-				"name":  "TradeGain",
-				"type":  "scatter",
-				"yaxis": "y2",
+				"y":    qIssue.QuantsetAsColumns.TradeGain,
+				"name": "TradeGain",
+				"type": "scatter",
+				// "yaxis": "y3",
 				"line": map[string]interface{}{
 					"color": "rgba(0, 139, 147,1.0)",
 				},
@@ -254,10 +254,11 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 			"autosize":      true,
 			"title":         qIssue.DownloaderIssue.Symbol,
 			"grid": map[string]int{
-				"rows":    2,
+				"rows":    1,
 				"columns": 1,
 			},
 			"xaxis": map[string]interface{}{
+				"domain": []float64{0.0, 0.9},
 				// breaks vertical zoom
 				// "fixedrange": true,
 				"rangeslider": map[string]interface{}{
@@ -282,14 +283,33 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 			// 	"spikethickness": 1,
 			// },
 			"yaxis": map[string]interface{}{
+				"title":      "Price ($ - normalized), Trade Gain",
 				"autorange":  true,
 				"fixedrange": false,
 				"type":       "log",
 			},
 			"yaxis2": map[string]interface{}{
+				"title":     fmt.Sprintf("Trade (algorithm:moving average, buy=%d, sell=%d)", quant.Buy, quant.Sell),
+				"autorange": false,
+				"range":     []float64{0.0, 1.0},
+				"tick0":     0,
+				"dtick":     1.0,
+				// "type":       "log",
+				// Below are only needed when using single row
+				"anchor":     "x",
+				"overlaying": "y",
+				"side":       "right",
+			},
+			"yaxis3": map[string]interface{}{
+				"title":      "Trade Gain (%)",
 				"autorange":  true,
 				"fixedrange": false,
 				"type":       "log",
+				// Below are only needed when using single row
+				"anchor":     "free",
+				"overlaying": "y",
+				"side":       "right",
+				"position":   0.93,
 			},
 		},
 	}
