@@ -4,6 +4,7 @@ async function updateChart() {
     let resp = await fetch('/plotly?symbol=' + symbol + '&maLength=' + maLength);
     let reply = await resp.json(); 
     Plotly.newPlot('chart', reply.data, reply.layout);
+    trades.innerHTML = reply.text;
 }
 
 document.addEventListener('DOMContentLoaded', function () {

@@ -32,7 +32,7 @@ const (
 
 var (
 	// CLI flags
-	liveDataPtr, startGUIPtr                *bool
+	liveDataPtr, runRangePtr, startGUIPtr   *bool
 	groupNamePtr, logFilePtr, symbolCSVList *string
 	logLevel                                *int
 
@@ -78,7 +78,8 @@ func Init() {
 	logFilePtr = flag.String("logfile", "log.txt", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
-	startGUIPtr = flag.Bool("startgui", true, "Runs a GUI for interacting with the data; open a browser to http://localhost"+guiPort+"/")
+	runRangePtr = flag.Bool("runrange", false, "When true, runs a range of parameters and exits.")
+	startGUIPtr = flag.Bool("startgui", false, "Runs a GUI for interacting with the data; open a browser to http://localhost"+guiPort+"/")
 	symbolCSVList = flag.String("symbolCSVList", "dia,spy,qqq", "Comma separated list of symbols for which to download prices")
 	flag.Parse()
 
@@ -122,17 +123,32 @@ func main() {
 		if err := http.ListenAndServe(guiPort, nil); err != nil {
 			log.Fatal(err)
 		}
-	} else {
-		// maLength := []int{50, 60, 70, 80, 90, 100}
-		// maLength := []int{80, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260}
-		maLength := []int{maLengthDefault}
-		// maSplit := []float64{0.03, 0.04, 0.05, 0.06, 0.07}
-		maSplit := []float64{maSplitDefault}
+	} else if *runRangePtr {
+		// maLength := []int{200}
+		// maSplit := []float64{0.05}
+		maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700}
+		maSplit := []float64{0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10}
+		results := make([][]float64, len(maLength))
 		for i := range maLength {
+			splitResults := make([]float64, len(maSplit))
+			splitResults[0] = 1.0
 			for j := range maSplit {
-				quant.Run(group, maLength[i], maSplit[j])
+				symbolResults := 1.0
+				qg := quant.GetGroup(group, maLength[i], maSplit[j])
+				for _, iss := range qg.Issues {
+					symbolResults *= iss.QuantsetAsColumns.TradeResults.TotalGain
+				}
+				splitResults[j] = symbolResults
 			}
+			results[i] = splitResults
 		}
+
+		logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maSplit: %+v\n", maSplit))
+		for i := range results {
+			logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maLength: %d %+v\n", maLength[i], results[i]))
+		}
+	} else {
+		quant.GetGroup(group, maLengthDefault, maSplitDefault)
 	}
 
 	err = logh.ShutdownAll()
@@ -150,7 +166,7 @@ func wrappedPlotlyHandler(group *downloader.Group) http.HandlerFunc {
 			logh.Map[appName].Printf(logh.Error, "error converting maLength value '%s' to int", mal)
 			return
 		}
-		qGroup := quant.Run(group, maLength, maSplitDefault)
+		qGroup := quant.GetGroup(group, maLength, maSplitDefault)
 		symbolIndex := -1
 		for i, v := range qGroup.Issues {
 			if strings.EqualFold(v.DownloaderIssue.Symbol, symbol) {
@@ -227,7 +243,7 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 				"x": qIssue.DownloaderIssue.DatasetAsColumns.Date,
 				// "y":     qIssue.DownloaderIssue.DatasetAsColumns.Volume,
 				// "name":  "Volume",
-				"y":     qIssue.QuantsetAsColumns.TradeMA,
+				"y":     qIssue.QuantsetAsColumns.TradeResults.TradeMA,
 				"name":  "TradeMA",
 				"type":  "scatter",
 				"yaxis": "y2",
@@ -239,8 +255,8 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 				"x": qIssue.DownloaderIssue.DatasetAsColumns.Date,
 				// "y":     qIssue.DownloaderIssue.DatasetAsColumns.Volume,
 				// "name":  "Volume",
-				"y":    qIssue.QuantsetAsColumns.TradeGain,
-				"name": "TradeGain",
+				"y":    qIssue.QuantsetAsColumns.TradeResults.TradeGainVsTime,
+				"name": "TradeGainVsTime",
 				"type": "scatter",
 				// "yaxis": "y3",
 				"line": map[string]interface{}{
@@ -300,18 +316,19 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 				"overlaying": "y",
 				"side":       "right",
 			},
-			"yaxis3": map[string]interface{}{
-				"title":      "Trade Gain (%)",
-				"autorange":  true,
-				"fixedrange": false,
-				"type":       "log",
-				// Below are only needed when using single row
-				"anchor":     "free",
-				"overlaying": "y",
-				"side":       "right",
-				"position":   0.93,
-			},
+			// "yaxis3": map[string]interface{}{
+			// 	"title":      "Trade Gain (%)",
+			// 	"autorange":  true,
+			// 	"fixedrange": false,
+			// 	"type":       "log",
+			// 	// Below are only needed when using single row
+			// 	"anchor":     "free",
+			// 	"overlaying": "y",
+			// 	"side":       "right",
+			// 	"position":   0.93,
+			// },
 		},
+		"text": qIssue.QuantsetAsColumns.TradeResults.Trades,
 	}
 
 	return json.NewEncoder(w).Encode(reply)

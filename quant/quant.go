@@ -2,6 +2,8 @@ package quant
 
 import (
 	"fmt"
+	"math"
+	"time"
 
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/logh"
@@ -25,8 +27,15 @@ type Quant struct {
 	PriceMA              []float64
 	PriceMAHigh          []float64
 	PriceMALow           []float64
-	TradeMA              []int
-	TradeGain            []float64
+	TradeResults         TradeResults
+}
+
+type TradeResults struct {
+	AnnualizedGain  float64
+	TotalGain       float64
+	Trades          string
+	TradeMA         []int
+	TradeGainVsTime []float64
 }
 
 const (
@@ -47,38 +56,44 @@ func Init(appNameInit string) {
 	appName = appNameInit
 }
 
-func Run(downloaderGroup *downloader.Group, maLength int, maSplit float64) *Group {
+func GetGroup(downloaderGroup *downloader.Group, maLength int, maSplit float64) *Group {
 	logh.Map[appName].Printf(logh.Info, "calling quant.Run with maLength: %d, maSplit: %5.2f", maLength, maSplit)
 	group := Group{Name: downloaderGroup.Name}
 	group.Issues = make([]Issue, len(downloaderGroup.Issues))
 
 	for i := range downloaderGroup.Issues {
-		priceNormalizedClose := multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
-			downloaderGroup.Issues[i].DatasetAsColumns.AdjClose)
-		priceNormalizedHigh := multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
-			downloaderGroup.Issues[i].DatasetAsColumns.AdjHigh)
-		priceNormalizedLow := multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
-			downloaderGroup.Issues[i].DatasetAsColumns.AdjLow)
-		priceNormalizedOpen := multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
-			downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen)
-		priceMA := ma(maLength, true, downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen,
-			downloaderGroup.Issues[i].DatasetAsColumns.AdjClose)
-		priceMA = multiplySlice(1.0/downloaderGroup.Issues[i].DatasetAsColumns.AdjOpen[maLength],
-			priceMA)
+		// Dont use the looping variable in a "i,v" style for loop as
+		// the variable is pointing to a pointer
+		iss := downloaderGroup.Issues[i].DatasetAsColumns
+		priceNormalizedClose := multiplySlice(1.0/iss.AdjOpen[maLength], iss.AdjClose)
+		priceNormalizedHigh := multiplySlice(1.0/iss.AdjOpen[maLength], iss.AdjHigh)
+		priceNormalizedLow := multiplySlice(1.0/iss.AdjOpen[maLength], iss.AdjLow)
+		priceNormalizedOpen := multiplySlice(1.0/iss.AdjOpen[maLength], iss.AdjOpen)
+		priceMA := ma(maLength, true, iss.AdjOpen, iss.AdjClose)
+		priceMA = multiplySlice(1.0/iss.AdjOpen[maLength], priceMA)
 		priceMALow := multiplySlice(1.0-maSplit, priceMA)
 		priceMAHigh := multiplySlice(1.0+maSplit, priceMA)
 		tradeMA := tradeMA(maLength, priceNormalizedClose, priceMA, priceMAHigh, priceMALow)
 		// tradeMA = tradeAddStop(tradeMA, downloaderGroup.Issues[i])
-		_, tradeGain := tradeGainMA(maLength, tradeMA, downloaderGroup.Issues[i])
+		trades, totalGain, tradeGainVsTime := tradeGainMA(maLength, tradeMA, downloaderGroup.Issues[i])
+		annualizedGain := annualizedGain(totalGain, iss.Date[0], iss.Date[len(iss.Date)-1])
+		tradeResults := TradeResults{AnnualizedGain: annualizedGain, TotalGain: totalGain, Trades: trades,
+			TradeMA: tradeMA, TradeGainVsTime: tradeGainVsTime}
 		group.Issues[i] = Issue{DownloaderIssue: &downloaderGroup.Issues[i],
 			QuantsetAsColumns: Quant{PriceNormalizedClose: priceNormalizedClose,
 				PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 				PriceNormalizedOpen: priceNormalizedOpen,
 				PriceMA:             priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
-				TradeMA: tradeMA, TradeGain: tradeGain}}
+				TradeResults: tradeResults}}
 	}
 
 	return &group
+}
+
+func annualizedGain(totalGain float64, startDate time.Time, endDate time.Time) float64 {
+	diff := endDate.Sub(startDate)
+	years := diff.Hours() / (24 * 365)
+	return math.Pow(totalGain, 1/years)
 }
 
 // MA is the moving average of the dataSlices.
@@ -235,7 +250,7 @@ func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
 	return tradeOut
 }
 
-func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (gain float64, tradeGain []float64) {
+func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (trades string, gain float64, tradeGain []float64) {
 	seriesLen := len(dlIssue.DatasetAsColumns.AdjOpen)
 	tradeGain = make([]float64, seriesLen)
 	gain = 1.0
@@ -251,7 +266,7 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (gain floa
 		case trade[i-1] == Sell && trade[i] == Buy:
 			tradeGain[i] = tradeGain[i-1]
 			if i == seriesLen-1 {
-				logh.Map[appName].Println(logh.Info, "**** TRADE TOMOROWW ****")
+				textOut += "**** TRADE TOMORROW ****\n"
 				break
 			}
 			buyPrice = dlIssue.DatasetAsColumns.AdjOpen[i+1]
@@ -264,10 +279,11 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (gain floa
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
 			textOut += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
 			if i == seriesLen-1 {
-				logh.Map[appName].Println(logh.Info, "**** TRADE TOMOROWW ****")
+				textOut += "**** TRADE TOMORROW ****\n"
 				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / buyPrice
 				gain *= thisGain
 				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
+				trades += fmt.Sprintf("%s\n", textOut)
 				logh.Map[appName].Printf(logh.Info, "%s", textOut)
 				break
 			}
@@ -275,6 +291,7 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (gain floa
 			thisGain := dlIssue.DatasetAsColumns.AdjOpen[i+1] / buyPrice
 			gain *= thisGain
 			textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f", dlIssue.DatasetAsColumns.AdjOpen[i+1], thisGain)
+			trades += fmt.Sprintf("%s\n", textOut)
 			logh.Map[appName].Printf(logh.Info, "%s", textOut)
 			textOut = ""
 		case trade[i-1] == Sell && trade[i] == Sell:
@@ -282,9 +299,17 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (gain floa
 		}
 	}
 
-	logh.Map[appName].Printf(logh.Info, "symbol: %s, buy/hold gain: %8.2f",
-		dlIssue.Symbol, dlIssue.DatasetAsColumns.AdjClose[seriesLen-1]/dlIssue.DatasetAsColumns.AdjOpen[0])
-	logh.Map[appName].Printf(logh.Info, "symbol: %s, total gain:    %8.2f\n\n", dlIssue.Symbol, gain)
+	start := dlIssue.DatasetAsColumns.Date[0]
+	end := dlIssue.DatasetAsColumns.Date[seriesLen-1]
+	bhGain := dlIssue.DatasetAsColumns.AdjClose[seriesLen-1] / dlIssue.DatasetAsColumns.AdjOpen[0]
+	textOut = fmt.Sprintf("symbol: %s, buy/hold gain (annualized): %5.2f (%5.2f)",
+		dlIssue.Symbol, bhGain, annualizedGain(bhGain, start, end))
+	trades += fmt.Sprintf("%s\n", textOut)
+	logh.Map[appName].Printf(logh.Info, textOut)
+	textOut = fmt.Sprintf("symbol: %s, total gain (annualized):    %5.2f (%5.2f)\n\n",
+		dlIssue.Symbol, gain, annualizedGain(gain, start, end))
+	trades += fmt.Sprintf("%s\n", textOut)
+	logh.Map[appName].Printf(logh.Info, textOut)
 
-	return gain, tradeGain
+	return trades, gain, tradeGain
 }
