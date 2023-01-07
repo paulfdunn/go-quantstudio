@@ -10,3 +10,18 @@ async function updateChart() {
 document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('process').onclick = updateChart;
 });
+
+async function downloadData() {
+    let response = await fetch('/downloadData')
+
+    if (!response.ok) {
+        alert("downloadData did not successfully run and data WAS NOT loaded");
+    } else {
+        console.log("downloadData successful"); 
+        alert("downloadData successfully ran");
+}
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('downloadData').onclick = downloadData;
+});

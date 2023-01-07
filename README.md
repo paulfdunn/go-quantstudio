@@ -13,7 +13,7 @@ Quantitative analysis highlights:
   * Supports zoom, hover tips, etc. 
 
 ```
- % go build && ./go-quantstudio --help 
+ % go build && ./go-quantstudio --help                                    
 Usage of ./go-quantstudio:
   -groupname string
     	Name for this group of symbols. Used for naming output files when processing groups of symbols. I.E. maybe you want to download/analyze stocks separately from ETFs (default "ETFs")
@@ -23,8 +23,8 @@ Usage of ./go-quantstudio:
     	Name of log file in /Users/pauldunn/tmp/go-quantstudio; blank to print logs to terminal. (default "log.txt")
   -loglevel int
     	Logging level; default 1. Zero based index into: [debug info warning audit error] (default 1)
-  -startgui
-    	Runs a GUI for interacting with the data; open a browser to http://localhost:8080/ (default true)
+  -runrange
+    	When true, runs a range of parameters and exits.
   -symbolCSVList string
     	Comma separated list of symbols for which to download prices (default "dia,spy,qqq")
 ```

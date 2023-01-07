@@ -32,16 +32,16 @@ const (
 
 var (
 	// CLI flags
-	liveDataPtr, runRangePtr, startGUIPtr   *bool
+	liveDataPtr, runRangePtr                *bool
 	groupNamePtr, logFilePtr, symbolCSVList *string
 	logLevel                                *int
 
 	// dataDirectorySuffix is appended to the users home directory.
 	dataDirectorySuffix = filepath.Join(`tmp`, appName)
 	dataDirectory       string
-)
 
-var (
+	groupChan chan *downloader.Group
+
 	//go:embed assets/chart.js assets/index.html assets/plotly-2.16.1.min.js
 	staticFS embed.FS
 )
@@ -74,12 +74,11 @@ func Init() {
 
 	// CLI flags
 	groupNamePtr = flag.String("groupname", "ETFs", "Name for this group of symbols. Used for naming output files when processing groups of symbols. I.E. maybe you want to download/analyze stocks separately from ETFs")
-	liveDataPtr = flag.Bool("livedata", true, "Get live data; otherwise load from file created during prior call.")
+	liveDataPtr = flag.Bool("livedata", true, "Get live data; otherwise load from file created during prior call. (Using the download button in the GUI will ALWAYS download new data.)")
 	logFilePtr = flag.String("logfile", "log.txt", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
 	runRangePtr = flag.Bool("runrange", false, "When true, runs a range of parameters and exits.")
-	startGUIPtr = flag.Bool("startgui", false, "Runs a GUI for interacting with the data; open a browser to http://localhost"+guiPort+"/")
 	symbolCSVList = flag.String("symbolCSVList", "dia,spy,qqq", "Comma separated list of symbols for which to download prices")
 	flag.Parse()
 
@@ -94,6 +93,8 @@ func Init() {
 
 	downloader.Init(appName)
 	quant.Init(appName)
+
+	groupChan = make(chan *downloader.Group, 1)
 }
 
 func main() {
@@ -103,12 +104,6 @@ func main() {
 
 	dataFilepath := filepath.Join(dataDirectory, *groupNamePtr)
 	symbols := strings.Split(*symbolCSVList, ",")
-	logh.Map[appName].Printf(logh.Info, "Processing these symbols: %+v", symbols)
-	group, err := financeYahoo.NewGroup(*liveDataPtr, dataFilepath, *groupNamePtr, symbols)
-	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "error calling NewGroup: %+v", err)
-		return
-	}
 
 	// adapted from https://github.com/353words/stocks/blob/main/index.html
 	fsSub, err := fs.Sub(staticFS, "assets")
@@ -116,73 +111,39 @@ func main() {
 		logh.Map[appName].Printf(logh.Error, "error calling fs.Sub: %+v", err)
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
-	http.HandleFunc("/plotly", wrappedPlotlyHandler(group))
+	http.HandleFunc("/plotly", wrappedPlotlyHandler(groupChan))
+	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, symbols, groupChan))
 
-	if *startGUIPtr {
-		logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+guiPort+",  CTRL-C to stop")
-		if err := http.ListenAndServe(guiPort, nil); err != nil {
-			log.Fatal(err)
-		}
-	} else if *runRangePtr {
-		// maLength := []int{200}
-		// maSplit := []float64{0.05}
-		maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700}
-		maSplit := []float64{0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10}
-		results := make([][]float64, len(maLength))
-		for i := range maLength {
-			splitResults := make([]float64, len(maSplit))
-			splitResults[0] = 1.0
-			for j := range maSplit {
-				symbolResults := 1.0
-				qg := quant.GetGroup(group, maLength[i], maSplit[j])
-				for _, iss := range qg.Issues {
-					symbolResults *= iss.QuantsetAsColumns.TradeResults.TotalGain
-				}
-				splitResults[j] = symbolResults
-			}
-			results[i] = splitResults
-		}
+	downloadYahooData(*liveDataPtr, dataFilepath, symbols, groupChan)
 
-		logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maSplit: %+v\n", maSplit))
-		for i := range results {
-			logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maLength: %d %+v\n", maLength[i], results[i]))
-		}
-	} else {
-		quant.GetGroup(group, maLengthDefault, maSplitDefault)
+	if *runRangePtr {
+		runRange()
 	}
 
+	logh.Map[appName].Println(logh.Info, "******************************************************")
+	logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+guiPort+",  CTRL-C to stop")
+	logh.Map[appName].Println(logh.Info, "******************************************************\n\n")
+	if err := http.ListenAndServe(guiPort, nil); err != nil {
+		log.Fatal(err)
+	}
+
+	// Should not get here unless the server has an error.
 	err = logh.ShutdownAll()
 	if err != nil {
 		logh.Map[appName].Printf(logh.Error, fmt.Sprintf("%#v", err))
 	}
 }
 
-func wrappedPlotlyHandler(group *downloader.Group) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		symbol := r.URL.Query().Get("symbol")
-		mal := r.URL.Query().Get("maLength")
-		maLength, err := strconv.Atoi(mal)
-		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "error converting maLength value '%s' to int", mal)
-			return
-		}
-		qGroup := quant.GetGroup(group, maLength, maSplitDefault)
-		symbolIndex := -1
-		for i, v := range qGroup.Issues {
-			if strings.EqualFold(v.DownloaderIssue.Symbol, symbol) {
-				symbolIndex = i
-				break
-			}
-		}
-		if symbolIndex == -1 {
-			logh.Map[appName].Printf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", symbol)
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		if err := plotlyJSON(qGroup.Issues[symbolIndex], w); err != nil {
-			log.Printf("issue: %s", err)
-		}
+func downloadYahooData(liveData bool, dataFilepath string, symbols []string, groupChan chan *downloader.Group) error {
+	logh.Map[appName].Printf(logh.Info, "Processing these symbols: %+v", symbols)
+	group, err := financeYahoo.NewGroup(liveData, dataFilepath, *groupNamePtr, symbols)
+	logh.Map[appName].Println(logh.Info, "Processing symbol complete")
+	groupChan <- group
+	if err != nil {
+		logh.Map[appName].Printf(logh.Error, "error calling NewGroup: %+v", err)
+		return err
 	}
+	return nil
 }
 
 // plotlyJSON writes plot data as JSON into w
@@ -332,4 +293,76 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 	}
 
 	return json.NewEncoder(w).Encode(reply)
+}
+
+func runRange() {
+	dlGroup := <-groupChan
+	// maLength := []int{200}
+	// maSplit := []float64{0.05}
+	maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700}
+	maSplit := []float64{0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10}
+	results := make([][]float64, len(maLength))
+	for i := range maLength {
+		splitResults := make([]float64, len(maSplit))
+		splitResults[0] = 1.0
+		for j := range maSplit {
+			symbolResults := 1.0
+			qg := quant.GetGroup(dlGroup, maLength[i], maSplit[j])
+			for _, iss := range qg.Issues {
+				symbolResults *= iss.QuantsetAsColumns.TradeResults.TotalGain
+			}
+			splitResults[j] = symbolResults
+		}
+		results[i] = splitResults
+	}
+
+	logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maSplit: %+v\n", maSplit))
+	for i := range results {
+		logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maLength: %d %+v\n", maLength[i], results[i]))
+	}
+}
+
+func wrappedDownloadYahooData(dataFilepath string, symbols []string, groupChan chan *downloader.Group) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		err := downloadYahooData(true, dataFilepath, symbols, groupChan)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func wrappedPlotlyHandler(groupChan chan *downloader.Group) http.HandlerFunc {
+	var dlGroup *downloader.Group
+	return func(w http.ResponseWriter, r *http.Request) {
+		symbol := r.URL.Query().Get("symbol")
+		mal := r.URL.Query().Get("maLength")
+		maLength, err := strconv.Atoi(mal)
+		if err != nil {
+			logh.Map[appName].Printf(logh.Error, "error converting maLength value '%s' to int", mal)
+			return
+		}
+
+		select {
+		case dlGroup = <-groupChan:
+		default:
+		}
+		qGroup := quant.GetGroup(dlGroup, maLength, maSplitDefault)
+		symbolIndex := -1
+		for i, v := range qGroup.Issues {
+			if strings.EqualFold(v.DownloaderIssue.Symbol, symbol) {
+				symbolIndex = i
+				break
+			}
+		}
+		if symbolIndex == -1 {
+			logh.Map[appName].Printf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", symbol)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if err := plotlyJSON(qGroup.Issues[symbolIndex], w); err != nil {
+			log.Printf("issue: %s", err)
+		}
+	}
 }

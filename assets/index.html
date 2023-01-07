@@ -7,26 +7,38 @@
 		<style>
 				#symbol {
 					width: 4em;
-					margin-right: 2em;
+					/* margin-left: 1em; */
+					margin-right: 1em;
 				}
 				#maLength {
 					width: 4em;
-					margin-right: 2em;
+					/* margin-left: 1em; */
+					margin-right: 1em;
 				}
 				#chart {
 					width: 1200px;
 					height: 800px;
 				}
+				#process {
+					margin-left: 1em;
+					margin-right: 1em;
+				}
+				#downloadData{
+					margin-left: 1em;
+					margin-right: 1em;
+				}
 		</style>
 	</head>
 	<body>
 		<h3>go-quantstudio</h3>
-		Symbol: <input id="symbol" value="spy" >  MaLength: <input id="maLength" value="200"><button id="process">Process</button>
+		Symbol: <input id="symbol" value="spy" >  MaLength: <input id="maLength" value="200">
+		<button id="process">Process</button>
+		<button id="downloadData">Download Data</button>
 		<hr />
 		<div id="chart"></div>
 		<div id="text">
 			<p><label for="trades">Trade history:</label></p>
-			<textarea id="trades" name="trades" rows="40" cols="120"></textarea>
+			<textarea id="trades" name="trades" rows="20" cols="120"></textarea>
 		</div>
 	</body>
 	<script>
