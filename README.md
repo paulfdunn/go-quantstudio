@@ -8,9 +8,9 @@ Downloader highlights:
 * Can be used as a package to download data, or use previously downloaded data, for use programmatically. See ExampleNewGroup() in ./downloader/financeYahoo/downloader_test.go for how to load data from a file into a Group object for programmatic use.
 
 Quantitative analysis highlights:
-* Work in progress....
 * After the download, or loading previously downloaded data, an http server is used so you can browse the results graphically.
   * Supports zoom, hover tips, etc. 
+* Includes a GUI automator that allows automated calls to the GUI. Keep this application running all the time, and have the output directory synced to Google Drive. That way you always have access to the latest trade output, from any device.
 
 ```
  % go build && ./go-quantstudio --help                                    

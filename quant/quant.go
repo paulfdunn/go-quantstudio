@@ -33,7 +33,7 @@ type Quant struct {
 type TradeResults struct {
 	AnnualizedGain  float64
 	TotalGain       float64
-	Trades          string
+	TradeHistory    string
 	TradeMA         []int
 	TradeGainVsTime []float64
 }
@@ -75,9 +75,9 @@ func GetGroup(downloaderGroup *downloader.Group, maLength int, maSplit float64) 
 		priceMAHigh := multiplySlice(1.0+maSplit, priceMA)
 		tradeMA := tradeMA(maLength, priceNormalizedClose, priceMA, priceMAHigh, priceMALow)
 		// tradeMA = tradeAddStop(tradeMA, downloaderGroup.Issues[i])
-		trades, totalGain, tradeGainVsTime := tradeGainMA(maLength, tradeMA, downloaderGroup.Issues[i])
+		tradeHistory, totalGain, tradeGainVsTime := tradeGainMA(maLength, tradeMA, downloaderGroup.Issues[i])
 		annualizedGain := annualizedGain(totalGain, iss.Date[0], iss.Date[len(iss.Date)-1])
-		tradeResults := TradeResults{AnnualizedGain: annualizedGain, TotalGain: totalGain, Trades: trades,
+		tradeResults := TradeResults{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
 			TradeMA: tradeMA, TradeGainVsTime: tradeGainVsTime}
 		group.Issues[i] = Issue{DownloaderIssue: &downloaderGroup.Issues[i],
 			QuantsetAsColumns: Quant{PriceNormalizedClose: priceNormalizedClose,
@@ -250,12 +250,16 @@ func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
 	return tradeOut
 }
 
-func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (trades string, gain float64, tradeGain []float64) {
+func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHistory string, gain float64, tradeGain []float64) {
 	seriesLen := len(dlIssue.DatasetAsColumns.AdjOpen)
 	tradeGain = make([]float64, seriesLen)
 	gain = 1.0
 	var buyPrice float64
 	var textOut string
+	fd := dlIssue.DatasetAsColumns.Date[0].Format(DateFormat)
+	ld := dlIssue.DatasetAsColumns.Date[len(dlIssue.DatasetAsColumns.Date)-1].Format(DateFormat)
+	tradeHistory = fmt.Sprintf("first trading day: %s, last trading day: %s", fd, ld)
+	logh.Map[appName].Printf(logh.Info, "%s", tradeHistory)
 	for i := 0; i < seriesLen; i++ {
 		if i <= maLength {
 			tradeGain[i] = 1
@@ -283,7 +287,7 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (trades st
 				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / buyPrice
 				gain *= thisGain
 				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
-				trades += fmt.Sprintf("%s\n", textOut)
+				tradeHistory += fmt.Sprintf("%s\n", textOut)
 				logh.Map[appName].Printf(logh.Info, "%s", textOut)
 				break
 			}
@@ -291,7 +295,7 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (trades st
 			thisGain := dlIssue.DatasetAsColumns.AdjOpen[i+1] / buyPrice
 			gain *= thisGain
 			textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f", dlIssue.DatasetAsColumns.AdjOpen[i+1], thisGain)
-			trades += fmt.Sprintf("%s\n", textOut)
+			tradeHistory += fmt.Sprintf("%s\n", textOut)
 			logh.Map[appName].Printf(logh.Info, "%s", textOut)
 			textOut = ""
 		case trade[i-1] == Sell && trade[i] == Sell:
@@ -304,12 +308,12 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (trades st
 	bhGain := dlIssue.DatasetAsColumns.AdjClose[seriesLen-1] / dlIssue.DatasetAsColumns.AdjOpen[0]
 	textOut = fmt.Sprintf("symbol: %s, buy/hold gain (annualized): %5.2f (%5.2f)",
 		dlIssue.Symbol, bhGain, annualizedGain(bhGain, start, end))
-	trades += fmt.Sprintf("%s\n", textOut)
+	tradeHistory += fmt.Sprintf("%s\n", textOut)
 	logh.Map[appName].Printf(logh.Info, textOut)
 	textOut = fmt.Sprintf("symbol: %s, total gain (annualized):    %5.2f (%5.2f)\n\n",
 		dlIssue.Symbol, gain, annualizedGain(gain, start, end))
-	trades += fmt.Sprintf("%s\n", textOut)
+	tradeHistory += fmt.Sprintf("%s\n", textOut)
 	logh.Map[appName].Printf(logh.Info, textOut)
 
-	return trades, gain, tradeGain
+	return tradeHistory, gain, tradeGain
 }

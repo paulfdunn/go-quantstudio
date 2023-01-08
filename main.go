@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -114,11 +115,17 @@ func main() {
 	http.HandleFunc("/plotly", wrappedPlotlyHandler(groupChan))
 	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, symbols, groupChan))
 
+	// Download data and put it in groupChan
 	downloadYahooData(*liveDataPtr, dataFilepath, symbols, groupChan)
 
 	if *runRangePtr {
 		runRange()
 	}
+
+	// Fire the handler once to run the data.
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/plotly?symbol=%s&maLength=%d", symbols[0], maLengthDefault), nil)
+	w := httptest.NewRecorder()
+	wrappedPlotlyHandler(groupChan)(w, req)
 
 	logh.Map[appName].Println(logh.Info, "******************************************************")
 	logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+guiPort+",  CTRL-C to stop")
@@ -135,9 +142,9 @@ func main() {
 }
 
 func downloadYahooData(liveData bool, dataFilepath string, symbols []string, groupChan chan *downloader.Group) error {
-	logh.Map[appName].Printf(logh.Info, "Processing these symbols: %+v", symbols)
+	logh.Map[appName].Printf(logh.Info, "Downloading these symbols: %+v", symbols)
 	group, err := financeYahoo.NewGroup(liveData, dataFilepath, *groupNamePtr, symbols)
-	logh.Map[appName].Println(logh.Info, "Processing symbol complete")
+	logh.Map[appName].Println(logh.Info, "Downloading symbol complete")
 	groupChan <- group
 	if err != nil {
 		logh.Map[appName].Printf(logh.Error, "error calling NewGroup: %+v", err)
@@ -289,7 +296,7 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 			// 	"position":   0.93,
 			// },
 		},
-		"text": qIssue.QuantsetAsColumns.TradeResults.Trades,
+		"text": qIssue.QuantsetAsColumns.TradeResults.TradeHistory,
 	}
 
 	return json.NewEncoder(w).Encode(reply)
