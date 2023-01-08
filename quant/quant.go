@@ -279,14 +279,21 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHist
 				dlIssue.Symbol, buyPrice)
 		case trade[i-1] == Buy && trade[i] == Buy:
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
-		case trade[i-1] == Buy && trade[i] == Sell:
+			if i == seriesLen-1 {
+				textOut += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
+				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / buyPrice
+				gain *= thisGain
+				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f (TRADE STILL OPEN)", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
+				tradeHistory += fmt.Sprintf("%s\n", textOut)
+				logh.Map[appName].Printf(logh.Info, "%s", textOut)
+			}
+		case (trade[i-1] == Buy && trade[i] == Sell):
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
 			textOut += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
 			if i == seriesLen-1 {
-				textOut += "**** TRADE TOMORROW ****\n"
 				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / buyPrice
 				gain *= thisGain
-				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
+				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f **** TRADE TOMORROW ****", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
 				tradeHistory += fmt.Sprintf("%s\n", textOut)
 				logh.Map[appName].Printf(logh.Info, "%s", textOut)
 				break

@@ -80,7 +80,7 @@ func Init() {
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
 	runRangePtr = flag.Bool("runrange", false, "When true, runs a range of parameters and exits.")
-	symbolCSVList = flag.String("symbolCSVList", "dia,spy,qqq", "Comma separated list of symbols for which to download prices")
+	symbolCSVList = flag.String("symbolCSVList", "dia,spy,qqq,sso,qld,ddm", "Comma separated list of symbols for which to download prices")
 	flag.Parse()
 
 	var logFilepath string
@@ -126,6 +126,9 @@ func main() {
 	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/plotly?symbol=%s&maLength=%d", symbols[0], maLengthDefault), nil)
 	w := httptest.NewRecorder()
 	wrappedPlotlyHandler(groupChan)(w, req)
+	// Download again as the above call consumed the data from the channel and the registered
+	// handler will not have data without calling downloadYahooData again.
+	downloadYahooData(false, dataFilepath, symbols, groupChan)
 
 	logh.Map[appName].Println(logh.Info, "******************************************************")
 	logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+guiPort+",  CTRL-C to stop")
