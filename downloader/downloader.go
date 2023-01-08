@@ -154,9 +154,7 @@ func GenerateURLs(symbols []string, url string) (urls []string, urlSymbolMap map
 }
 
 func LoadURLCollectionDataFromFile(dataFilePath string) (urlData []httph.URLCollectionData, err error) {
-	logh.Map[appName].Printf(logh.Warning, "**********")
 	logh.Map[appName].Printf(logh.Warning, "Prior data loaded from file.")
-	logh.Map[appName].Printf(logh.Warning, "**********")
 	bIn, err := ioutil.ReadFile(dataFilePath + BinaryExtension)
 	if err != nil {
 		logh.Map[appName].Printf(logh.Error, "Reading JSON bodies failed, error:%s", err)
