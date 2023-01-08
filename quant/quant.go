@@ -258,7 +258,7 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHist
 	var textOut string
 	fd := dlIssue.DatasetAsColumns.Date[0].Format(DateFormat)
 	ld := dlIssue.DatasetAsColumns.Date[len(dlIssue.DatasetAsColumns.Date)-1].Format(DateFormat)
-	tradeHistory = fmt.Sprintf("first trading day: %s, last trading day: %s", fd, ld)
+	tradeHistory = fmt.Sprintf("first trading day: %s, last trading day: %s\n", fd, ld)
 	logh.Map[appName].Printf(logh.Info, "%s", tradeHistory)
 	for i := 0; i < seriesLen; i++ {
 		if i <= maLength {

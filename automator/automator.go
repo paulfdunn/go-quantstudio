@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/paulfdunn/go-quantstudio/defs"
 	"github.com/paulfdunn/logh"
 )
 
@@ -27,7 +28,7 @@ var (
 	logLevel                  *int
 
 	// dataDirectorySuffix is appended to the users home directory.
-	dataDirectorySuffix = filepath.Join(`tmp`, `go-quantstudio`, appName)
+	dataDirectorySuffix = filepath.Join(`tmp`, defs.AppName, appName)
 	dataDirectory       string
 )
 
@@ -49,7 +50,7 @@ func Init() {
 	logFilePtr = flag.String("logfile", "log-chromedp.txt", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
-	symbolCSVList = flag.String("symbolCSVList", "dia,spy,qqq", "Comma separated list of symbols for which to download prices")
+	symbolCSVList = flag.String("symbolCSVList", defs.SymbolsDefault, "Comma separated list of symbols for which to download prices")
 	flag.Parse()
 
 	var logFilepath string
@@ -68,8 +69,9 @@ func main() {
 	Init()
 
 	symbols := strings.Split(*symbolCSVList, ",")
+	screenShotUrl := fmt.Sprintf("http://%s/", "localhost:8080")
 
-	getChromedpScreenShot("localhost:8080", dataDirectory, symbols, 100)
+	getChromedpScreenShot(screenShotUrl, dataDirectory, symbols, 100)
 }
 
 func crashDetect() {
@@ -84,10 +86,7 @@ func crashDetect() {
 	}
 }
 
-func getChromedpScreenShot(site string, dataDirectory string, symbols []string, quality int) {
-	// forming url to be captured
-	screenShotUrl := fmt.Sprintf("http://%s/", site)
-
+func getChromedpScreenShot(screenShotUrl string, dataDirectory string, symbols []string, quality int) {
 	// byte slice to hold captured image in bytes
 	var buf []byte
 

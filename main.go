@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/paulfdunn/go-quantstudio/defs"
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/downloader/financeYahoo"
 	"github.com/paulfdunn/go-quantstudio/quant"
@@ -24,14 +25,13 @@ import (
 )
 
 const (
-	appName = "go-quantstudio"
 	guiPort = ":8080"
-
-	maLengthDefault = 200
-	maSplitDefault  = 0.05
 )
 
 var (
+	// Only needed to shorten the log statements
+	appName = defs.AppName
+
 	// CLI flags
 	liveDataPtr, runRangePtr                *bool
 	groupNamePtr, logFilePtr, symbolCSVList *string
@@ -80,7 +80,7 @@ func Init() {
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
 	runRangePtr = flag.Bool("runrange", false, "When true, runs a range of parameters and exits.")
-	symbolCSVList = flag.String("symbolCSVList", "dia,spy,qqq,ddm,qld,sso", "Comma separated list of symbols for which to download prices")
+	symbolCSVList = flag.String("symbolCSVList", defs.SymbolsDefault, "Comma separated list of symbols for which to download prices")
 	flag.Parse()
 
 	var logFilepath string
@@ -123,7 +123,7 @@ func main() {
 	}
 
 	// Fire the handler once to run the data.
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/plotly?symbol=%s&maLength=%d", symbols[0], maLengthDefault), nil)
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/plotly?symbol=%s&maLength=%d", symbols[0], defs.MALengthDefault), nil)
 	w := httptest.NewRecorder()
 	wrappedPlotlyHandler(groupChan)(w, req)
 	// Download again as the above call consumed the data from the channel and the registered
@@ -358,7 +358,7 @@ func wrappedPlotlyHandler(groupChan chan *downloader.Group) http.HandlerFunc {
 		case dlGroup = <-groupChan:
 		default:
 		}
-		qGroup := quant.GetGroup(dlGroup, maLength, maSplitDefault)
+		qGroup := quant.GetGroup(dlGroup, maLength, defs.MASplitDefault)
 		symbolIndex := -1
 		for i, v := range qGroup.Issues {
 			if strings.EqualFold(v.DownloaderIssue.Symbol, symbol) {

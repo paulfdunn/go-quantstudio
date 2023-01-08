@@ -5,6 +5,9 @@
 		<script src="/plotly-2.16.1.min.js"></script>
 		<script src="/chart.js"></script>
 		<style>
+				:root {
+					--chartWidth: 1200px;
+				}
 				#symbol {
 					width: 4em;
 					/* margin-left: 1em; */
@@ -16,7 +19,7 @@
 					margin-right: 1em;
 				}
 				#chart {
-					width: 1200px;
+					width: var(--chartWidth);
 					height: 800px;
 				}
 				#process {
@@ -26,6 +29,10 @@
 				#downloadData{
 					margin-left: 1em;
 					margin-right: 1em;
+				}
+				#tradeHistory {
+  					width: var(--chartWidth);
+  					height: 20em;
 				}
 		</style>
 	</head>
@@ -37,8 +44,8 @@
 		<hr />
 		<div id="chart"></div>
 		<div id="text">
-			<p><label for="trades">Trade history:</label></p>
-			<textarea id="trades" name="trades" rows="20" cols="120"></textarea>
+			<p><label for="tradeHistory">Trade history:</label></p>
+			<textarea id="tradeHistory" name="tradeHistory"></textarea>
 		</div>
 	</body>
 	<script>
