@@ -189,7 +189,7 @@ func waitForNextWeekday() {
 		tomorrowAfternoon = time.Date(now.Year(), now.Month(), now.Day()+1, 23, 0, 0, 0, time.UTC)
 
 	}
-	statusUpdateRate := time.Hour
+	statusUpdateRate := time.Hour * 8
 	lastStatus := now
 	logh.Map[appName].Printf(logh.Info, "Waiting for %+v", tomorrowAfternoon)
 	for {
