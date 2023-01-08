@@ -10,7 +10,7 @@ Downloader highlights:
 Quantitative analysis highlights:
 * After the download, or loading previously downloaded data, an http server is used so you can browse the results graphically.
   * Supports zoom, hover tips, etc. 
-* Includes a GUI automator that allows automated calls to the GUI. Keep this application running all the time, and have the output directory synced to Google Drive. That way you always have access to the latest trade output, from any device.
+* Includes a GUI automator that allows automated calls to the GUI that then save the charts as image files. Keep this application running all the time, and have the output directory synced to Google Drive. That way you always have access to the latest trade output and charts, from any device.
 
 ```
  % go build && ./go-quantstudio --help                                    
