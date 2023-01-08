@@ -80,7 +80,7 @@ func Init() {
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
 	runRangePtr = flag.Bool("runrange", false, "When true, runs a range of parameters and exits.")
-	symbolCSVList = flag.String("symbolCSVList", "dia,spy,qqq,sso,qld,ddm", "Comma separated list of symbols for which to download prices")
+	symbolCSVList = flag.String("symbolCSVList", "dia,spy,qqq,ddm,qld,sso", "Comma separated list of symbols for which to download prices")
 	flag.Parse()
 
 	var logFilepath string
