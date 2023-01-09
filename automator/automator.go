@@ -148,7 +148,7 @@ func getChromedpScreenShot(screenShotUrl string, dataDirectory string, symbols [
 			logh.Map[appName].Printf(logh.Info, "Saved screenshot to file %s", filename)
 		}
 
-		waitForNextWeekday()
+		waitForNextMarketClose()
 		clickDownloadData(screenShotUrl, options)
 	}
 }
@@ -178,28 +178,34 @@ func clickDownloadData(screenShotUrl string, options []func(*chromedp.ExecAlloca
 	}
 }
 
-func waitForNextWeekday() {
+func waitForNextMarketClose() {
 	now := time.Now()
-	var tomorrowAfternoon time.Time
-	if now.Weekday() == time.Friday {
-		tomorrowAfternoon = time.Date(now.Year(), now.Month(), now.Day()+3, 23, 0, 0, 0, time.UTC)
+	thisAfternoon := time.Date(now.Year(), now.Month(), now.Day(), 23, 0, 0, 0, time.UTC)
+	var nextAfternoon time.Time
+	if now.Weekday() >= time.Monday && now.Weekday() <= time.Friday && now.Before(thisAfternoon) {
+		nextAfternoon = thisAfternoon
+	} else if now.Weekday() == time.Friday {
+		nextAfternoon = time.Date(now.Year(), now.Month(), now.Day()+3, 23, 0, 0, 0, time.UTC)
 	} else if now.Weekday() == time.Saturday {
-		tomorrowAfternoon = time.Date(now.Year(), now.Month(), now.Day()+2, 23, 0, 0, 0, time.UTC)
+		nextAfternoon = time.Date(now.Year(), now.Month(), now.Day()+2, 23, 0, 0, 0, time.UTC)
 	} else {
-		tomorrowAfternoon = time.Date(now.Year(), now.Month(), now.Day()+1, 23, 0, 0, 0, time.UTC)
-
+		nextAfternoon = time.Date(now.Year(), now.Month(), now.Day()+1, 23, 0, 0, 0, time.UTC)
 	}
+
 	statusUpdateRate := time.Hour * 8
-	lastStatus := now
-	logh.Map[appName].Printf(logh.Info, "Waiting for %+v", tomorrowAfternoon)
+	lastStatus := time.Now().Add(-2 * statusUpdateRate)
 	for {
-		if time.Now().After(tomorrowAfternoon) {
+		if time.Now().After(nextAfternoon) {
+			logh.Map[appName].Printf(logh.Info, "Time was after %+v, continuing.", nextAfternoon)
 			break
 		}
+
+		// Output status messages, but rate limit.
 		if time.Now().After(lastStatus.Add(statusUpdateRate)) {
-			logh.Map[appName].Printf(logh.Info, "Waiting for %+v", tomorrowAfternoon)
-			lastStatus = now
+			logh.Map[appName].Printf(logh.Info, "Waiting for %+v", nextAfternoon)
+			lastStatus = time.Now()
 		}
+
 		time.Sleep(1 * time.Minute)
 	}
 }

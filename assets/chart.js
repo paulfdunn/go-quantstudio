@@ -1,8 +1,8 @@
 async function updateChart() {
     let symbol = document.getElementById('symbol').value;
     let maLength = document.getElementById('maLength').value;
-    let resp = await fetch('/plotly?symbol=' + symbol + '&maLength=' + maLength);
-    let reply = await resp.json(); 
+    let response = await fetch('/plotly?symbol=' + symbol + '&maLength=' + maLength);
+    let reply = await response.json(); 
     Plotly.newPlot('chart', reply.data, reply.layout);
     tradeHistory.innerHTML = reply.text;
 }
@@ -19,7 +19,18 @@ async function downloadData() {
     } else {
         console.log("downloadData successful"); 
         alert("downloadData successfully ran");
+    }
 }
+
+async function loadSymbols() {
+    let response = await fetch('/symbols')
+    let reply = await response.json(); 
+
+    if (!response.ok) {
+        alert("loadSymbols did not successfully load symbols");
+    } 
+
+    symbols.innerHTML =  reply.join(" ");
 }
 
 document.addEventListener('DOMContentLoaded', function () {

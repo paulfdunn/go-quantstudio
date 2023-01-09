@@ -114,6 +114,7 @@ func main() {
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
 	http.HandleFunc("/plotly", wrappedPlotlyHandler(groupChan))
 	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, symbols, groupChan))
+	http.HandleFunc("/symbols", wrappedSymbols(symbols))
 
 	// Download data and put it in groupChan
 	downloadYahooData(*liveDataPtr, dataFilepath, symbols, groupChan)
@@ -340,6 +341,13 @@ func wrappedDownloadYahooData(dataFilepath string, symbols []string, groupChan c
 			return
 		}
 		w.WriteHeader(http.StatusOK)
+	}
+}
+
+func wrappedSymbols(symbols []string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(symbols)
 	}
 }
 
