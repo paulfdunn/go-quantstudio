@@ -274,9 +274,8 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHist
 				break
 			}
 			buyPrice = dlIssue.DatasetAsColumns.AdjOpen[i+1]
-			textOut = fmt.Sprintf("date: %s, symbol: %s, buyPrice: %8.2f, ",
-				dlIssue.DatasetAsColumns.Date[i].Format(DateFormat),
-				dlIssue.Symbol, buyPrice)
+			textOut = fmt.Sprintf("symbol: %s, date: %s, buyPrice: %8.2f, ",
+				dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), buyPrice)
 		case trade[i-1] == Buy && trade[i] == Buy:
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
 			if i == seriesLen-1 {
