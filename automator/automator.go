@@ -198,11 +198,11 @@ func waitForNextMarketClose() {
 		nextAfternoon = time.Date(now.Year(), now.Month(), now.Day()+1, 23, 0, 0, 0, time.UTC)
 	}
 
-	waitUntil(nextAfternoon)
+	statusUpdateRate := time.Hour * 4
+	waitUntil(nextAfternoon, statusUpdateRate)
 }
 
-func waitUntil(nextAfternoon time.Time) {
-	statusUpdateRate := time.Hour * 1
+func waitUntil(nextAfternoon time.Time, statusUpdateRate time.Duration) {
 	lastStatus := time.Now().Add(-2 * statusUpdateRate)
 	for {
 		if time.Now().After(nextAfternoon) {
