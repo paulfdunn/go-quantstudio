@@ -61,33 +61,39 @@ func GetGroup(downloaderGroup *downloader.Group, maLength int, maSplit float64) 
 	group := Group{Name: downloaderGroup.Name}
 	group.Issues = make([]Issue, len(downloaderGroup.Issues))
 
-	for i := range downloaderGroup.Issues {
+	for index := range downloaderGroup.Issues {
 		// Dont use the looping variable in a "i,v" style for loop as
 		// the variable is pointing to a pointer
-		iss := downloaderGroup.Issues[i].DatasetAsColumns
-		priceNormalizedClose := multiplySlice(1.0/iss.AdjOpen[maLength], iss.AdjClose)
-		priceNormalizedHigh := multiplySlice(1.0/iss.AdjOpen[maLength], iss.AdjHigh)
-		priceNormalizedLow := multiplySlice(1.0/iss.AdjOpen[maLength], iss.AdjLow)
-		priceNormalizedOpen := multiplySlice(1.0/iss.AdjOpen[maLength], iss.AdjOpen)
-		priceMA := ma(maLength, true, iss.AdjOpen, iss.AdjClose)
-		priceMA = multiplySlice(1.0/iss.AdjOpen[maLength], priceMA)
-		priceMALow := multiplySlice(1.0-maSplit, priceMA)
-		priceMAHigh := multiplySlice(1.0+maSplit, priceMA)
-		tradeMA := tradeMA(maLength, priceNormalizedClose, priceMA, priceMAHigh, priceMALow)
-		// tradeMA = tradeAddStop(tradeMA, downloaderGroup.Issues[i])
-		tradeHistory, totalGain, tradeGainVsTime := tradeGainMA(maLength, tradeMA, downloaderGroup.Issues[i])
-		annualizedGain := annualizedGain(totalGain, iss.Date[0], iss.Date[len(iss.Date)-1])
-		tradeResults := TradeResults{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
-			TradeMA: tradeMA, TradeGainVsTime: tradeGainVsTime}
-		group.Issues[i] = Issue{DownloaderIssue: &downloaderGroup.Issues[i],
-			QuantsetAsColumns: Quant{PriceNormalizedClose: priceNormalizedClose,
-				PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
-				PriceNormalizedOpen: priceNormalizedOpen,
-				PriceMA:             priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
-				TradeResults: tradeResults}}
+		group.Issues[index] = Issue{DownloaderIssue: &downloaderGroup.Issues[index]}
+		group.UpdateIssue(index, maLength, maSplit)
 	}
 
 	return &group
+}
+
+func (grp *Group) UpdateIssue(index int, maLength int, maSplit float64) {
+	iss := grp.Issues[index].DownloaderIssue
+	issDAC := iss.DatasetAsColumns
+	priceNormalizedClose := multiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjClose)
+	priceNormalizedHigh := multiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjHigh)
+	priceNormalizedLow := multiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjLow)
+	priceNormalizedOpen := multiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjOpen)
+	priceMA := ma(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
+	priceMA = multiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
+	priceMALow := multiplySlice(1.0-maSplit, priceMA)
+	priceMAHigh := multiplySlice(1.0+maSplit, priceMA)
+	tradeMA := tradeMA(maLength, priceNormalizedClose, priceMA, priceMAHigh, priceMALow)
+	// tradeMA = tradeAddStop(tradeMA, iss)
+	tradeHistory, totalGain, tradeGainVsTime := tradeGainMA(maLength, tradeMA, *iss)
+	annualizedGain := annualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
+	tradeResults := TradeResults{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
+		TradeMA: tradeMA, TradeGainVsTime: tradeGainVsTime}
+	grp.Issues[index] = Issue{DownloaderIssue: iss,
+		QuantsetAsColumns: Quant{PriceNormalizedClose: priceNormalizedClose,
+			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
+			PriceNormalizedOpen: priceNormalizedOpen,
+			PriceMA:             priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
+			TradeResults: tradeResults}}
 }
 
 func annualizedGain(totalGain float64, startDate time.Time, endDate time.Time) float64 {

@@ -353,6 +353,7 @@ func wrappedSymbols(symbols []string) http.HandlerFunc {
 
 func wrappedPlotlyHandler(groupChan chan *downloader.Group) http.HandlerFunc {
 	var dlGroup *downloader.Group
+	var qGroup *quant.Group
 	return func(w http.ResponseWriter, r *http.Request) {
 		symbol := r.URL.Query().Get("symbol")
 		mal := r.URL.Query().Get("maLength")
@@ -364,12 +365,12 @@ func wrappedPlotlyHandler(groupChan chan *downloader.Group) http.HandlerFunc {
 
 		select {
 		case dlGroup = <-groupChan:
+			qGroup = quant.GetGroup(dlGroup, defs.MALengthDefault, defs.MASplitDefault)
 		default:
 		}
-		qGroup := quant.GetGroup(dlGroup, maLength, defs.MASplitDefault)
 		symbolIndex := -1
-		for i, v := range qGroup.Issues {
-			if strings.EqualFold(v.DownloaderIssue.Symbol, symbol) {
+		for i, v := range dlGroup.Issues {
+			if strings.EqualFold(v.Symbol, symbol) {
 				symbolIndex = i
 				break
 			}
@@ -379,6 +380,7 @@ func wrappedPlotlyHandler(groupChan chan *downloader.Group) http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		qGroup.UpdateIssue(symbolIndex, maLength, defs.MASplitDefault)
 		if err := plotlyJSON(qGroup.Issues[symbolIndex], w); err != nil {
 			log.Printf("issue: %s", err)
 		}
