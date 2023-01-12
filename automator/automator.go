@@ -47,7 +47,7 @@ func Init() {
 	}
 
 	// CLI flags
-	logFilePtr = flag.String("logfile", "log-chromedp.txt", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
+	logFilePtr = flag.String("logfile", "", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
 	symbolCSVList = flag.String("symbolCSVList", defs.SymbolsDefault, "Comma separated list of symbols for which to download prices")

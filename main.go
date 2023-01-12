@@ -75,8 +75,8 @@ func Init() {
 
 	// CLI flags
 	groupNamePtr = flag.String("groupname", "ETFs", "Name for this group of symbols. Used for naming output files when processing groups of symbols. I.E. maybe you want to download/analyze stocks separately from ETFs")
-	liveDataPtr = flag.Bool("livedata", true, "Get live data; otherwise load from file created during prior call. (Using the download button in the GUI will ALWAYS download new data.)")
-	logFilePtr = flag.String("logfile", "log.txt", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
+	liveDataPtr = flag.Bool("livedata", false, "Get live data; otherwise load from file created during prior call. (Using the download button in the GUI will ALWAYS download new data.)")
+	logFilePtr = flag.String("logfile", "", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
 	runRangePtr = flag.Bool("runrange", false, "When true, runs a range of parameters and exits.")
