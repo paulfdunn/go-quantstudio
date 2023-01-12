@@ -29,16 +29,20 @@ Usage of ./go-quantstudio:
     	Comma separated list of symbols for which to download prices (default "dia,spy,qqq,ddm,qld,sso")
 ```
 
-## Suggested use
+## Suggested use to run the GUI
 In one terminal:
 ```
 go build && ./go-quantstudio
 ```
-In a second terminal:
+Then open a browser to http://localhost:8080
+
+## Suggested use if you'd like daily automatic updates for the output
+Sync the output folder to Google Drive, or another similar service, and always have the latest data ready for your viewing, on any device.
+
+In a **second** terminal (go-quantstudio must be running as shown above):
 ```
 cd automator; go build && ./automator
 ```
-Then open a browser to http://localhost:8080
 ## Example GUI
 
 ![GO QuantStudio](./docs/go-quantstudio.png)
