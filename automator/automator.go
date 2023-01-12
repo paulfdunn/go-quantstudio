@@ -20,6 +20,8 @@ import (
 
 const (
 	appName = "automator"
+	// Set headless false for debugging, as headless hides the browser window
+	headless = true
 )
 
 var (
@@ -75,8 +77,13 @@ func main() {
 }
 
 func clickDownloadData(screenShotUrl string) {
+	// setting options for headless chrome to execute with
+	var options []chromedp.ExecAllocatorOption
+	options = append(options,
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", headless), chromedp.WindowSize(1400, 900))...)
+
 	// setup context with options
-	actx, acancel := chromedp.NewExecAllocator(context.Background())
+	actx, acancel := chromedp.NewExecAllocator(context.Background(), options...)
 	defer acancel()
 	// create context
 	ctx, cancel := chromedp.NewContext(actx)
@@ -140,9 +147,8 @@ func getScreenshotForSymbol(screenShotUrl string, symbol string, quality int) {
 
 	// setting options for headless chrome to execute with
 	var options []chromedp.ExecAllocatorOption
-	// Set headless false for debugging, as headless hides the browser window
 	options = append(options,
-		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", true), chromedp.WindowSize(1400, 900))...)
+		append(chromedp.DefaultExecAllocatorOptions[:], chromedp.Flag("headless", headless), chromedp.WindowSize(1400, 900))...)
 
 	// setup context with options
 	actx, acancel := chromedp.NewExecAllocator(context.Background(), options...)
