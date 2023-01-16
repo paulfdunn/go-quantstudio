@@ -13,12 +13,12 @@ go-quantstudio is a GO (GOLANG) application for quantitative analysis using GO. 
 * Includes a GUI automator that allows automated calls to the GUI that then saves the charts as image files. Keep this application running all the time, and have the output directory synced to Google Drive. That way you always have access to the latest trade output and charts, from any device.
 
 ```
-go build && ./go-quantstudio --help
+% go build && ./go-quantstudio --help
 Usage of ./go-quantstudio:
   -groupname string
     	Name for this group of symbols. Used for naming output files when processing groups of symbols. I.E. maybe you want to download/analyze stocks separately from ETFs (default "ETFs")
   -livedata
-    	Get live data; otherwise load from file created during prior call. (Using the download button in the GUI will ALWAYS download new data.)
+    	Get live data; otherwise load from file created during prior call. (Using the download button in the GUI will ALWAYS download new data.) (default true)
   -logfile string
     	Name of log file in /Users/pauldunn/tmp/go-quantstudio; blank to print logs to terminal.
   -loglevel int
