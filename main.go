@@ -41,7 +41,7 @@ var (
 	dataDirectorySuffix = filepath.Join(`tmp`, appName)
 	dataDirectory       string
 
-	groupChan chan *downloader.Group
+	dlGroupChan chan *downloader.Group
 
 	//go:embed assets/chart.js assets/index.html assets/plotly-2.16.1.min.js
 	staticFS embed.FS
@@ -95,7 +95,7 @@ func Init() {
 	downloader.Init(appName)
 	quant.Init(appName)
 
-	groupChan = make(chan *downloader.Group, 1)
+	dlGroupChan = make(chan *downloader.Group, 1)
 }
 
 func main() {
@@ -112,24 +112,27 @@ func main() {
 		logh.Map[appName].Printf(logh.Error, "error calling fs.Sub: %+v", err)
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
-	http.HandleFunc("/plotly", wrappedPlotlyHandler(groupChan))
-	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, symbols, groupChan))
+	http.HandleFunc("/plotly", wrappedPlotlyHandler(dlGroupChan))
+	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, symbols, dlGroupChan))
 	http.HandleFunc("/symbols", wrappedSymbols(symbols))
 
-	// Download data and put it in groupChan
-	downloadYahooData(*liveDataPtr, dataFilepath, symbols, groupChan)
+	// Download data and put it in dlGroupChan
+	downloadYahooData(*liveDataPtr, dataFilepath, symbols, dlGroupChan)
 
 	if *runRangePtr {
 		runRange()
+		logh.Map[appName].Println(logh.Info, "runRange complete...")
+		os.Exit(0)
 	}
 
 	// Fire the handler once to run the data.
-	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/plotly?symbol=%s&maLength=%d", symbols[0], defs.MALengthDefault), nil)
+	qp := fmt.Sprintf("/plotly?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
+	req := httptest.NewRequest(http.MethodGet, qp, nil)
 	w := httptest.NewRecorder()
-	wrappedPlotlyHandler(groupChan)(w, req)
+	wrappedPlotlyHandler(dlGroupChan)(w, req)
 	// Download again as the above call consumed the data from the channel and the registered
 	// handler will not have data without calling downloadYahooData again.
-	downloadYahooData(false, dataFilepath, symbols, groupChan)
+	downloadYahooData(false, dataFilepath, symbols, dlGroupChan)
 
 	logh.Map[appName].Println(logh.Info, "******************************************************")
 	logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+guiPort+",  CTRL-C to stop")
@@ -145,11 +148,11 @@ func main() {
 	}
 }
 
-func downloadYahooData(liveData bool, dataFilepath string, symbols []string, groupChan chan *downloader.Group) error {
+func downloadYahooData(liveData bool, dataFilepath string, symbols []string, dlGroupChan chan *downloader.Group) error {
 	logh.Map[appName].Printf(logh.Info, "Downloading these symbols: %+v", symbols)
 	group, err := financeYahoo.NewGroup(liveData, dataFilepath, *groupNamePtr, symbols)
 	logh.Map[appName].Println(logh.Info, "Downloading symbol complete")
-	groupChan <- group
+	dlGroupChan <- group
 	if err != nil {
 		logh.Map[appName].Printf(logh.Error, "error calling NewGroup: %+v", err)
 		return err
@@ -307,11 +310,11 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 }
 
 func runRange() {
-	dlGroup := <-groupChan
+	dlGroup := <-dlGroupChan
 	// maLength := []int{200}
 	// maSplit := []float64{0.05}
-	maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700}
-	maSplit := []float64{0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10}
+	maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200}
+	maSplit := []float64{0.015, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16}
 	results := make([][]float64, len(maLength))
 	for i := range maLength {
 		splitResults := make([]float64, len(maSplit))
@@ -320,22 +323,23 @@ func runRange() {
 			symbolResults := 1.0
 			qg := quant.GetGroup(dlGroup, maLength[i], maSplit[j])
 			for _, iss := range qg.Issues {
-				symbolResults *= iss.QuantsetAsColumns.TradeResults.TotalGain
+				symbolResults *= iss.QuantsetAsColumns.TradeResults.AnnualizedGain
 			}
 			splitResults[j] = symbolResults
 		}
 		results[i] = splitResults
 	}
 
+	logh.Map[appName].Printf(logh.Info, "runRange output result is product of all symbol AnnualizedGain values")
 	logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maSplit: %+v\n", maSplit))
 	for i := range results {
 		logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maLength: %d %+v\n", maLength[i], results[i]))
 	}
 }
 
-func wrappedDownloadYahooData(dataFilepath string, symbols []string, groupChan chan *downloader.Group) http.HandlerFunc {
+func wrappedDownloadYahooData(dataFilepath string, symbols []string, dlGroupChan chan *downloader.Group) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := downloadYahooData(true, dataFilepath, symbols, groupChan)
+		err := downloadYahooData(true, dataFilepath, symbols, dlGroupChan)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -351,7 +355,7 @@ func wrappedSymbols(symbols []string) http.HandlerFunc {
 	}
 }
 
-func wrappedPlotlyHandler(groupChan chan *downloader.Group) http.HandlerFunc {
+func wrappedPlotlyHandler(dlGroupChan chan *downloader.Group) http.HandlerFunc {
 	var dlGroup *downloader.Group
 	var qGroup *quant.Group
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -362,10 +366,16 @@ func wrappedPlotlyHandler(groupChan chan *downloader.Group) http.HandlerFunc {
 			logh.Map[appName].Printf(logh.Error, "error converting maLength value '%s' to int", mal)
 			return
 		}
+		mas := r.URL.Query().Get("maSplit")
+		maSplit, err := strconv.ParseFloat(mas, 64)
+		if err != nil {
+			logh.Map[appName].Printf(logh.Error, "error converting maSplit value '%s' to float", mas)
+			return
+		}
 
 		select {
-		case dlGroup = <-groupChan:
-			qGroup = quant.GetGroup(dlGroup, defs.MALengthDefault, defs.MASplitDefault)
+		case dlGroup = <-dlGroupChan:
+			qGroup = quant.GetGroup(dlGroup, maLength, maSplit)
 		default:
 		}
 		symbolIndex := -1
@@ -380,7 +390,7 @@ func wrappedPlotlyHandler(groupChan chan *downloader.Group) http.HandlerFunc {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		qGroup.UpdateIssue(symbolIndex, maLength, defs.MASplitDefault)
+		qGroup.UpdateIssue(symbolIndex, maLength, maSplit)
 		if err := plotlyJSON(qGroup.Issues[symbolIndex], w); err != nil {
 			log.Printf("issue: %s", err)
 		}

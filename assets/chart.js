@@ -1,7 +1,8 @@
 async function updateChart() {
     let symbol = document.getElementById('symbol').value;
     let maLength = document.getElementById('maLength').value;
-    let response = await fetch('/plotly?symbol=' + symbol + '&maLength=' + maLength);
+    let maSplit = document.getElementById('maSplit').value;
+    let response = await fetch('/plotly?symbol=' + symbol + '&maLength=' + maLength+ '&maSplit=' + maSplit);
     let reply = await response.json(); 
     Plotly.newPlot('chart', reply.data, reply.layout);
     tradeHistory.innerHTML = reply.text;
