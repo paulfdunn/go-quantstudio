@@ -315,9 +315,9 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHist
 		}
 	}
 
-	start := dlIssue.DatasetAsColumns.Date[0]
+	start := dlIssue.DatasetAsColumns.Date[maLength]
 	end := dlIssue.DatasetAsColumns.Date[seriesLen-1]
-	bhGain := dlIssue.DatasetAsColumns.AdjClose[seriesLen-1] / dlIssue.DatasetAsColumns.AdjOpen[0]
+	bhGain := dlIssue.DatasetAsColumns.AdjClose[seriesLen-1] / dlIssue.DatasetAsColumns.AdjOpen[maLength]
 	textOut = fmt.Sprintf("symbol: %s, buy/hold gain (annualized): %5.2f (%5.2f)",
 		dlIssue.Symbol, bhGain, annualizedGain(bhGain, start, end))
 	tradeHistory += fmt.Sprintf("%s\n", textOut)
