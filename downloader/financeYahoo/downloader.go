@@ -77,7 +77,7 @@ func urlCollectionDataToGroup(urlData []httph.URLCollectionData, urlSymbolMap ma
 		r := csv.NewReader(strings.NewReader(string(ucd.Bytes)))
 		records, err := r.ReadAll()
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "reading Byte(s) from input file failed, error:%s", err)
+			logh.Map[appName].Printf(logh.Error, "reading Byte(s) from input failed, error:%s", err)
 			return nil, err
 		}
 		if len(records) == 0 {

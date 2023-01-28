@@ -1,5 +1,5 @@
 # go-quantstudio
-go-quantstudio is a GO (GOLANG) application for quantitative analysis using GO. There are two primary pieces of go-quantstudio: the downloader, and the quantitative analysis features.
+go-quantstudio is a GO (GOLANG) application for quantitative analysis using GO. There are three primary pieces of go-quantstudio: the downloader, the quantitative analysis features, and the automator.
 
 ## Downloader highlights:
 * Downloads security price data from Yahoo.
@@ -10,7 +10,9 @@ go-quantstudio is a GO (GOLANG) application for quantitative analysis using GO. 
 ## Quantitative analysis highlights:
 * After the download, or loading previously downloaded data, an http server is used so you can browse the results graphically.
   * Supports zoom, hover tips, etc. 
-* Includes a GUI automator that allows automated calls to the GUI that then saves the charts as image files. Keep this application running all the time, and have the output directory synced to Google Drive. That way you always have access to the latest trade output and charts, from any device.
+
+## Automator highlights
+* Includes a GUI automator that allows automated calls to the GUI in a headless browser that then saves the charts as image files. Keep this application running all the time, and have the output directory synced to Google Drive. That way you always have access to the latest trade output and charts, from any device.
 
 ```
 % go build && ./go-quantstudio --help

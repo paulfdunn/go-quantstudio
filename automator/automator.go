@@ -2,15 +2,16 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/user"
 	"path/filepath"
 	"runtime/debug"
-	"strings"
 	"time"
 
 	"github.com/chromedp/chromedp"
@@ -26,8 +27,8 @@ const (
 
 var (
 	// CLI flags
-	logFilePtr, symbolCSVList *string
-	logLevel                  *int
+	logFilePtr *string
+	logLevel   *int
 
 	// dataDirectorySuffix is appended to the users home directory.
 	dataDirectorySuffix = filepath.Join(`tmp`, defs.AppName, appName)
@@ -52,7 +53,6 @@ func Init() {
 	logFilePtr = flag.String("logfile", "", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
-	symbolCSVList = flag.String("symbolCSVList", defs.SymbolsDefault, "Comma separated list of symbols for which to download prices")
 	flag.Parse()
 
 	var logFilepath string
@@ -70,8 +70,13 @@ func main() {
 
 	Init()
 
-	symbols := strings.Split(*symbolCSVList, ",")
+	// Get the symbols that are loaded in go-quantstudio, then get screen shots for all symbols
 	screenShotUrl := fmt.Sprintf("http://%s/", "localhost:8080")
+	symbols, err := getLoadedSymbols()
+	if err != nil {
+		logh.Map[appName].Printf(logh.Error, "Automator could not load symbols from go-quantstudio, exiting.")
+		os.Exit(1)
+	}
 
 	getChromedpScreenShotsForAllSymbols(screenShotUrl, dataDirectory, symbols, 100)
 }
@@ -134,6 +139,29 @@ func getChromedpScreenShotsForAllSymbols(screenShotUrl string, dataDirectory str
 	}
 }
 
+// getLoadedSymbols gets the symbols that are running in go-quantstudio.
+func getLoadedSymbols() ([]string, error) {
+	resp, err := http.Get(fmt.Sprintf("http://localhost%s/symbols", defs.GUIPort))
+	if err != nil {
+		logh.Map[appName].Printf(logh.Error, "error getting symbols: %s", err)
+		return nil, err
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logh.Map[appName].Printf(logh.Error, "error getting symbol bytes: %s", err)
+		return nil, err
+	}
+	var symbols []string
+	err = json.Unmarshal(body, &symbols)
+	if err != nil {
+		logh.Map[appName].Printf(logh.Error, "error unmarshalling symbols: %s", err)
+		return nil, err
+	}
+
+	return symbols, nil
+}
+
 func getScreenshotForSymbol(screenShotUrl string, symbol string, quality int) {
 	// byte slice to hold captured image in bytes
 	var buf []byte
@@ -181,7 +209,7 @@ func getScreenshotForSymbol(screenShotUrl string, symbol string, quality int) {
 	filename := fmt.Sprintf("%s.%s", symbol, ext)
 
 	//write byte slice data of standard screenshot to file
-	if err := ioutil.WriteFile(filepath.Join(dataDirectory, filename), buf, 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(dataDirectory, filename), buf, 0644); err != nil {
 		log.Fatal(err)
 	}
 

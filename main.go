@@ -24,10 +24,6 @@ import (
 	"github.com/paulfdunn/logh"
 )
 
-const (
-	guiPort = ":8080"
-)
-
 var (
 	// Only needed to shorten the log statements
 	appName = defs.AppName
@@ -126,8 +122,8 @@ func main() {
 	}
 
 	// Fire the handler once to run the data.
-	qp := fmt.Sprintf("/plotly?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
-	req := httptest.NewRequest(http.MethodGet, qp, nil)
+	target := fmt.Sprintf("/plotly?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
+	req := httptest.NewRequest(http.MethodGet, target, nil)
 	w := httptest.NewRecorder()
 	wrappedPlotlyHandler(dlGroupChan)(w, req)
 	// Download again as the above call consumed the data from the channel and the registered
@@ -135,9 +131,9 @@ func main() {
 	downloadYahooData(false, dataFilepath, symbols, dlGroupChan)
 
 	logh.Map[appName].Println(logh.Info, "******************************************************")
-	logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+guiPort+",  CTRL-C to stop")
+	logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+defs.GUIPort+",  CTRL-C to stop")
 	logh.Map[appName].Println(logh.Info, "******************************************************\n\n")
-	if err := http.ListenAndServe(guiPort, nil); err != nil {
+	if err := http.ListenAndServe(defs.GUIPort, nil); err != nil {
 		log.Fatal(err)
 	}
 

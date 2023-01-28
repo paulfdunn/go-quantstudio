@@ -2,6 +2,7 @@ package defs
 
 const (
 	AppName         = "go-quantstudio"
+	GUIPort         = ":8080"
 	MALengthDefault = 200
 	MASplitDefault  = 0.05
 	// DIA	SPDR Dow Jones Industrial Average ETF Trust
