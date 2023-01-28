@@ -12,7 +12,7 @@ go-quantstudio is a GO (GOLANG) application for quantitative analysis using GO. 
   * Supports zoom, hover tips, etc. 
 
 ## Automator highlights
-* Includes a GUI automator that allows automated calls to the GUI in a headless browser that then saves the charts as image files. Keep this application running all the time, and have the output directory synced to Google Drive. That way you always have access to the latest trade output and charts, from any device.
+* Includes a GUI automator that allows automated calls to the go-quantstudio REST API from a headless browser. The automator then saves the charts from the browser as image files. (This is the only way to get rendered output, as the rendering is done at the client.) Keep this application running all the time, and have the output directory synced to Google Drive. That way you always have access to the latest trade output and charts, from any device.
 
 ```
 % go build && ./go-quantstudio --help
