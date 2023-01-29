@@ -87,6 +87,7 @@ func Init() {
 		logh.DefaultFlags, 100, int64(10e6))
 
 	logh.Map[appName].Printf(logh.Debug, "user.Current(): %+v", usr)
+	logh.Map[appName].Printf(logh.Info, "Data and logs being saved to directory: %s", dataDirectory)
 
 	downloader.Init(appName)
 	quant.Init(appName)
@@ -121,12 +122,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Fire the handler once to run the data.
+	// Fire the handler once to run the data. This is just so the lof file has the
+	// latest trqade information.
 	target := fmt.Sprintf("/plotly?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
 	req := httptest.NewRequest(http.MethodGet, target, nil)
 	w := httptest.NewRecorder()
 	wrappedPlotlyHandler(dlGroupChan)(w, req)
-	// Download again as the above call consumed the data from the channel and the registered
+	// Download again (livedata is false, so this is loading the data downloaded above from file)
+	// as the above call consumed the data from the channel and the registered
 	// handler will not have data without calling downloadYahooData again.
 	downloadYahooData(false, dataFilepath, symbols, dlGroupChan)
 

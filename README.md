@@ -38,6 +38,11 @@ go build && ./go-quantstudio
 ```
 Then open a browser to http://localhost:8080
 
+If you would like to save the output data, maybe with it synced to something like Google drive for viewing while away from your computer, use the following to have logs saved to a file instead of printed to the terminal.
+```
+go build && ./go-quantstudio -logfile=log.txt
+```
+
 ## Suggested use if you'd like daily automatic updates for the output
 Sync the output folder to Google Drive, or another similar service, and always have the latest data ready for your viewing, on any device.
 
