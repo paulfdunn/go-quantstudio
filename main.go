@@ -150,7 +150,7 @@ func main() {
 func downloadYahooData(liveData bool, dataFilepath string, symbols []string, dlGroupChan chan *downloader.Group) error {
 	logh.Map[appName].Printf(logh.Info, "Downloading these symbols: %+v", symbols)
 	group, err := financeYahoo.NewGroup(liveData, dataFilepath, *groupNamePtr, symbols)
-	logh.Map[appName].Println(logh.Info, "Downloading symbol complete")
+	logh.Map[appName].Println(logh.Info, "Downloading complete")
 	dlGroupChan <- group
 	if err != nil {
 		logh.Map[appName].Printf(logh.Error, "error calling NewGroup: %+v", err)

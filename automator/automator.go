@@ -218,6 +218,22 @@ func getScreenshotForSymbol(screenShotUrl string, symbol string, quality int) {
 
 }
 
+// listenForNetworkEvent shows how to get responses.
+// func listenForNetworkEvent(ctx context.Context) {
+// 	chromedp.ListenTarget(ctx, func(ev interface{}) {
+// 		switch ev := ev.(type) {
+
+// 		case *network.EventResponseReceived:
+// 			resp := ev.Response
+// 			logh.Map[appName].Printf(logh.Info, "response status: %d", resp.Status)
+// 			if len(resp.Headers) != 0 {
+// 				logh.Map[appName].Printf(logh.Debug, "received headers: %s", resp.Headers)
+// 			}
+// 		}
+// 	})
+
+// }
+
 func waitForNextMarketClose() {
 	now := time.Now()
 	thisAfternoon := time.Date(now.Year(), now.Month(), now.Day(), 23, 0, 0, 0, time.UTC)
