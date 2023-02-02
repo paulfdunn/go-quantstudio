@@ -123,7 +123,7 @@ func main() {
 	}
 
 	// Fire the handler once to run the data. This is just so the lof file has the
-	// latest trqade information.
+	// latest trade information.
 	target := fmt.Sprintf("/plotly?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
 	req := httptest.NewRequest(http.MethodGet, target, nil)
 	w := httptest.NewRecorder()

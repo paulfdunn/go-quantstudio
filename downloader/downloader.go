@@ -88,8 +88,8 @@ var (
 	EarliestDate = time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
 	LatestDate   = time.Now().AddDate(0, 0, 1).Unix()
 	// Used to generate test data
-	// earliestDate = time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
-	// latestDate   = time.Date(2022, time.January, 5, 0, 0, 0, 0, time.UTC).Unix()
+	// EarliestDate = time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
+	// LatestDate   = time.Date(2022, time.January, 5, 0, 0, 0, 0, time.UTC).Unix()
 
 	URLCollectionTimeout = time.Duration(10 * time.Second)
 
@@ -105,6 +105,7 @@ func Init(appNameInit string) {
 // from the prior call.
 func NewGroup(liveData bool, dataFilePath string, name string, symbols []string, url string,
 	callbackURLCollectionDataToGroup URLCollectionDataToGroup) (*Group, error) {
+	updateLatestDate()
 	urls, urlSymbolMap := GenerateURLs(symbols, url)
 
 	var urlData []httph.URLCollectionData
@@ -303,4 +304,8 @@ func saveURLCollectionData(urlData []httph.URLCollectionData, dataFilePath strin
 		return err
 	}
 	return nil
+}
+
+func updateLatestDate() {
+	LatestDate = time.Now().AddDate(0, 0, 1).Unix()
 }
