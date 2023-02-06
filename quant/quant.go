@@ -276,7 +276,9 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHist
 		case trade[i-1] == Sell && trade[i] == Buy:
 			tradeGain[i] = tradeGain[i-1]
 			if i == seriesLen-1 {
-				textOut += "**** TRADE TOMORROW ****\n"
+				textOut = fmt.Sprintf("symbol: %s, date: %s, buyPrice: %8.2f **** TRADE TOMORROW ****",
+					dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), buyPrice)
+				logh.Map[appName].Printf(logh.Info, "%s", textOut)
 				break
 			}
 			buyPrice = dlIssue.DatasetAsColumns.AdjOpen[i+1]
