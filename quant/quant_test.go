@@ -33,6 +33,15 @@ func Example_annualizeGain() {
 	// annualizedGain from 2022-01-01 to 2022-07-01 with total gain:  1.10 is  1.21
 }
 
+func Example_annualizedGain() {
+	// A 10% gain over 2 years is 1.048 gain annually.
+	result := annualizedGain(1.1, time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
+	fmt.Printf("%5.3f\n", result)
+
+	// Output:
+	// 1.049
+}
+
 func Example_ma() {
 	f1 := []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
 	f2 := []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
@@ -61,6 +70,17 @@ func Example_multiplySlice() {
 	// [1.1 2.2 3.3]
 }
 
+func Example_multiplySliceGated() {
+	result := multiplySliceGated(
+		2.0,
+		[]float64{1.0, 2.0, 3.0, 4.0, 5.0},
+		[]int{Buy, Sell, Sell, Buy, Buy}, Sell)
+	fmt.Printf("%+v\n", result)
+
+	// Output:
+	// [1 4 6 4 5]
+}
+
 func Example_multiplySlices() {
 	f1 := []float64{1.0, 2.0, 3.0}
 	f2 := []float64{10.0, 20.0, 30.0}
@@ -76,6 +96,22 @@ func Example_multiplySlices() {
 	// Output:
 	// [10 40 90]
 	// [1000 8000 27000]
+}
+
+func Example_offsetSlice() {
+	result := offsetSlice(2.0, []float64{1.0, 2.0, 3.0, 4.0, 5.0})
+	fmt.Printf("%+v\n", result)
+
+	// Output:
+	// [3 4 5 6 7]
+}
+
+func Example_reciprocolSlice() {
+	result := reciprocolSlice([]float64{1.0, 2.0, 4.0, 5.0})
+	fmt.Printf("%+v\n", result)
+
+	// Output:
+	// [1 0.5 0.25 0.2]
 }
 
 func Example_slicesAreEqualLength() {
@@ -120,8 +156,8 @@ func Example_sumSlices() {
 	// [111 222 333]
 }
 
-func Example_tradeGainMA() {
-	// make columns line up with odd names
+func Example_tradeGain() {
+	// make columns line up by using sel instead of Sell, and trade____ instead of trade.
 	sel := Sell
 	trade____ := []int{sel, sel, sel, Buy, Buy, Buy, sel, sel}
 	close := []float64{1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0}
@@ -139,15 +175,15 @@ func Example_tradeGainMA() {
 		time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC),
 		time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC)}
 	issue.Symbol = "test"
-	_, gain, tradeG := tradeGainMA(2, trade____, issue)
+	_, gain, tradeG := tradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 
 	trade____ = []int{sel, sel, sel, sel, Buy, Buy, Buy, sel}
-	_, gain, tradeG = tradeGainMA(2, trade____, issue)
+	_, gain, tradeG = tradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 
 	trade____ = []int{sel, sel, sel, sel, sel, Buy, Buy, Buy}
-	_, gain, tradeG = tradeGainMA(2, trade____, issue)
+	_, gain, tradeG = tradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 
 	// Output:

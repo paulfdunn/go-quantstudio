@@ -83,8 +83,7 @@ func (grp *Group) UpdateIssue(index int, maLength int, maSplit float64) {
 	priceMALow := multiplySlice(1.0-maSplit, priceMA)
 	priceMAHigh := multiplySlice(1.0+maSplit, priceMA)
 	tradeMA := tradeMA(maLength, priceNormalizedClose, priceMA, priceMAHigh, priceMALow)
-	// tradeMA = tradeAddStop(tradeMA, iss)
-	tradeHistory, totalGain, tradeGainVsTime := tradeGainMA(maLength, tradeMA, *iss)
+	tradeHistory, totalGain, tradeGainVsTime := tradeGain(maLength, tradeMA, *iss)
 	annualizedGain := annualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
 	tradeResults := TradeResults{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
 		TradeMA: tradeMA, TradeGainVsTime: tradeGainVsTime}
@@ -96,6 +95,8 @@ func (grp *Group) UpdateIssue(index int, maLength int, maSplit float64) {
 			TradeResults: tradeResults}}
 }
 
+// annualizedGain will return the annualized gain given a totalGain achieved between the startDate
+// and endDate.
 func annualizedGain(totalGain float64, startDate time.Time, endDate time.Time) float64 {
 	diff := endDate.Sub(startDate)
 	years := diff.Hours() / (24 * 365)
@@ -136,6 +137,8 @@ func ma(length int, biasStart bool, dataSlices ...[]float64) []float64 {
 	return out
 }
 
+// multiplySlice will multiply the input slice values by the provided scale factor
+// and return the resulting slice.
 func multiplySlice(scale float64, dataSlice []float64) []float64 {
 	out := make([]float64, len(dataSlice))
 	for i := range dataSlice {
@@ -144,6 +147,21 @@ func multiplySlice(scale float64, dataSlice []float64) []float64 {
 	return out
 }
 
+// multiplySlice will perform multiply the input slice values by the provided scale factor,
+// but only when the provided gate[i] == gateValue
+// and return the resulting slice.
+func multiplySliceGated(scale float64, dataSlice []float64, gate []int, gateValue int) []float64 {
+	out := make([]float64, len(dataSlice))
+	for i := range dataSlice {
+		out[i] = dataSlice[i]
+		if gate[i] == gateValue {
+			out[i] *= scale
+		}
+	}
+	return out
+}
+
+// multiplySlices will perform a pointwise product of all inputs slices and return the resulting slice.
 func multiplySlices(dataSlices ...[]float64) []float64 {
 	if err := slicesAreEqualLength(dataSlices...); err != nil {
 		return nil
@@ -163,6 +181,25 @@ func multiplySlices(dataSlices ...[]float64) []float64 {
 	return out
 }
 
+// offsetSlice will add an offset to all values in the input slice and return the resulting slice.
+func offsetSlice(offset float64, dataSlice []float64) []float64 {
+	out := make([]float64, len(dataSlice))
+	for i := range dataSlice {
+		out[i] = offset + dataSlice[i]
+	}
+	return out
+}
+
+// reciprocolSlice will perform a pointwise reciprical of the input slice and return the resulting slice.
+func reciprocolSlice(dataSlice []float64) []float64 {
+	out := make([]float64, len(dataSlice))
+	for i := range dataSlice {
+		out[i] = 1 / dataSlice[i]
+	}
+	return out
+}
+
+// slicesAreEqualLength returns an error if the input slices are not of the same length.
 func slicesAreEqualLength(dataSlices ...[]float64) error {
 	slices := len(dataSlices)
 	for i := 1; i < slices; i++ {
@@ -175,6 +212,7 @@ func slicesAreEqualLength(dataSlices ...[]float64) error {
 	return nil
 }
 
+// sumSlices will perform a pointwise sum of all inputs slices and return the resulting slice.
 func sumSlices(dataSlices ...[]float64) []float64 {
 	if err := slicesAreEqualLength(dataSlices...); err != nil {
 		return nil
@@ -191,6 +229,9 @@ func sumSlices(dataSlices ...[]float64) []float64 {
 	return out
 }
 
+// tradeMA compares moving average of price (priveMA) to the split of the moving average
+// (priceMAHigh and priceMALow) and returns an output slice indicating Buy or Sell at
+// each point. Note that Sell is returned for the first maLength number of points.
 func tradeMA(maLength int, close, priceMA, priceMAHigh, priceMALow []float64) []int {
 	if err := slicesAreEqualLength(close, priceMA); err != nil {
 		return nil
@@ -198,7 +239,7 @@ func tradeMA(maLength int, close, priceMA, priceMAHigh, priceMALow []float64) []
 
 	out := make([]int, len(priceMA))
 	for i := range priceMA {
-		if i <= maLength {
+		if i <= maLength-1 {
 			out[i] = Sell
 			continue
 		}
@@ -256,7 +297,10 @@ func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
 	return tradeOut
 }
 
-func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHistory string, gain float64, tradeGain []float64) {
+// tradeGain takes in input slice trade with values Buy/Sell, and after delay number of points,
+// applies the Buy/Sell signals to dlIssue to proces a tradeHistory, gain (total gain), and
+// tradeGain (accumulated gain/loss at each point).
+func tradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory string, gain float64, tradeGain []float64) {
 	seriesLen := len(dlIssue.DatasetAsColumns.AdjOpen)
 	tradeGain = make([]float64, seriesLen)
 	gain = 1.0
@@ -267,7 +311,7 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHist
 	tradeHistory = fmt.Sprintf("first trading day: %s, last trading day: %s\n", fd, ld)
 	logh.Map[appName].Printf(logh.Info, "%s", tradeHistory)
 	for i := 0; i < seriesLen; i++ {
-		if i <= maLength {
+		if i <= delay-1 {
 			tradeGain[i] = 1
 			continue
 		}
@@ -317,9 +361,9 @@ func tradeGainMA(maLength int, trade []int, dlIssue downloader.Issue) (tradeHist
 		}
 	}
 
-	start := dlIssue.DatasetAsColumns.Date[maLength]
+	start := dlIssue.DatasetAsColumns.Date[delay]
 	end := dlIssue.DatasetAsColumns.Date[seriesLen-1]
-	bhGain := dlIssue.DatasetAsColumns.AdjClose[seriesLen-1] / dlIssue.DatasetAsColumns.AdjOpen[maLength]
+	bhGain := dlIssue.DatasetAsColumns.AdjClose[seriesLen-1] / dlIssue.DatasetAsColumns.AdjOpen[delay]
 	textOut = fmt.Sprintf("symbol: %s, buy/hold gain (annualized): %5.2f (%5.2f)",
 		dlIssue.Symbol, bhGain, annualizedGain(bhGain, start, end))
 	tradeHistory += fmt.Sprintf("%s\n", textOut)

@@ -8,6 +8,7 @@ go-quantstudio is a GO (GOLANG) application for quantitative analysis using GO. 
 * Can be used as a package to download data, or use previously downloaded data, for use programmatically. See ExampleNewGroup() in ./downloader/financeYahoo/downloader_test.go for how to load data from a file into a Group object for programmatic use.
 
 ## Quantitative analysis highlights:
+* Includes a moving average analysis that will determine trades based on the security price crossing  +/- a percentage of the moving average.
 * After the download, or loading previously downloaded data, an http server is used so you can browse the results graphically.
   * Supports zoom, hover tips, etc. 
 

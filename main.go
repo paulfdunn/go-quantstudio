@@ -122,7 +122,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Fire the handler once to run the data. This is just so the lof file has the
+	// Fire the handler once to run the data. This is just so the log file has the
 	// latest trade information.
 	target := fmt.Sprintf("/plotly?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
 	req := httptest.NewRequest(http.MethodGet, target, nil)
@@ -208,7 +208,7 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 				"fill":      "tonexty",
 				"fillcolor": "rgba(0, 140, 8, 0.3)",
 				"line": map[string]interface{}{
-					"color": "rgba(0, 140, 8, 0.5)", // 0, 147, 82 | 0, 139, 147 | 0, 139, 147 | 0, 65, 147 |8, 0, 147| 82, 0, 147
+					"color": "rgba(0, 140, 8, 0.5)",
 				},
 				// "xaxis": "x2",
 			},
@@ -260,6 +260,7 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 				"spikecolor":     "#000000",
 				"spikethickness": 1,
 			},
+			// Second chart
 			// "xaxis2": map[string]interface{}{
 			// breaks vertical zoom
 			// 	"fixedrange": true,

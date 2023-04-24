@@ -123,7 +123,10 @@ func NewGroup(liveData bool, dataFilePath string, name string, symbols []string,
 		}
 	}
 
-	group, _ := callbackURLCollectionDataToGroup(urlData, urlSymbolMap, name)
+	group, err := callbackURLCollectionDataToGroup(urlData, urlSymbolMap, name)
+	if err != nil {
+		return nil, err
+	}
 	if liveData {
 		err := group.SaveCSV(dataFilePath)
 		if err != nil {
