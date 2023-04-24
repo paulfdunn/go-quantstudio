@@ -3,7 +3,8 @@
 	<head>
 		<title>go-quantstudio</title>
 		<script src="/plotly-2.16.1.min.js"></script>
-		<script src="/chart.js"></script>
+		<script src="/chartMA.js"></script>
+		<script src="/script.js"></script>
 		<style>
 				:root {
 					--chartWidth: 1200px;
@@ -37,7 +38,7 @@
 					width: 20em;
 					height: 4em;
 				}
-				#chart {
+				#chartMA {
 					width: var(--chartWidth);
 					height: 800px;
 				}
@@ -57,7 +58,7 @@
 		<label for="symbols">Loaded symbols</label>
 		<textarea readonly id="symbols" name="symbols"></textarea>
 		<hr />
-		<div id="chart"></div>
+		<div id="chartMA"></div>
 		<div id="history">
 			<p><label for="tradeHistory">Trade history:</label></p>
 			<textarea readonly id="tradeHistory" name="tradeHistory"></textarea>

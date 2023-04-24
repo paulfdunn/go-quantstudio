@@ -38,7 +38,7 @@ var (
 
 	dlGroupChan chan *downloader.Group
 
-	//go:embed assets/chart.js assets/index.html assets/plotly-2.16.1.min.js
+	//go:embed assets/chartMA.js assets/index.html assets/plotly-2.16.1.min.js assets/script.js
 	staticFS embed.FS
 )
 
@@ -109,7 +109,7 @@ func main() {
 		logh.Map[appName].Printf(logh.Error, "error calling fs.Sub: %+v", err)
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
-	http.HandleFunc("/plotly", quantMA.WrappedPlotlyHandlerMA(dlGroupChan))
+	http.HandleFunc("/plotly-ma", quantMA.WrappedPlotlyHandlerMA(dlGroupChan))
 	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, symbols, dlGroupChan))
 	http.HandleFunc("/symbols", wrappedSymbols(symbols))
 
@@ -124,7 +124,7 @@ func main() {
 
 	// Fire the handler once to run the data. This is just so the log file has the
 	// latest trade information.
-	target := fmt.Sprintf("/plotly?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
+	target := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
 	req := httptest.NewRequest(http.MethodGet, target, nil)
 	w := httptest.NewRecorder()
 	quantMA.WrappedPlotlyHandlerMA(dlGroupChan)(w, req)
