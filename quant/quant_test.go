@@ -8,23 +8,23 @@ import (
 	"github.com/paulfdunn/goutil"
 )
 
-func Example_annualizeGain() {
+func Example_AnnualizeGain() {
 	totalGain := 1.1
 	start := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-	ag := annualizedGain(totalGain, start, end)
+	ag := AnnualizedGain(totalGain, start, end)
 	fmt.Printf("annualizedGain from %s to %s with total gain: %5.2f is %5.2f\n", start.Format(DateFormat), end.Format(DateFormat), totalGain, ag)
 
 	totalGain = 1.1
 	start = time.Date(2010, 1, 1, 0, 0, 0, 0, time.UTC)
 	end = time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
-	ag = annualizedGain(totalGain, start, end)
+	ag = AnnualizedGain(totalGain, start, end)
 	fmt.Printf("annualizedGain from %s to %s with total gain: %5.2f is %5.2f\n", start.Format(DateFormat), end.Format(DateFormat), totalGain, ag)
 
 	totalGain = 1.1
 	start = time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	end = time.Date(2022, 7, 1, 0, 0, 0, 0, time.UTC)
-	ag = annualizedGain(totalGain, start, end)
+	ag = AnnualizedGain(totalGain, start, end)
 	fmt.Printf("annualizedGain from %s to %s with total gain: %5.2f is %5.2f\n", start.Format(DateFormat), end.Format(DateFormat), totalGain, ag)
 
 	// Output:
@@ -33,24 +33,15 @@ func Example_annualizeGain() {
 	// annualizedGain from 2022-01-01 to 2022-07-01 with total gain:  1.10 is  1.21
 }
 
-func Example_annualizedGain() {
-	// A 10% gain over 2 years is 1.048 gain annually.
-	result := annualizedGain(1.1, time.Date(2021, 1, 1, 0, 0, 0, 0, time.UTC), time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC))
-	fmt.Printf("%5.3f\n", result)
-
-	// Output:
-	// 1.049
-}
-
-func Example_ma() {
+func Example_MA() {
 	f1 := []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
 	f2 := []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
-	result := ma(2, false, f1, f2)
+	result := MA(2, false, f1, f2)
 	fmt.Printf("%+v\n", result)
 
 	f1 = []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
 	f2 = []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
-	result = ma(2, true, f1, f2)
+	result = MA(2, true, f1, f2)
 	fmt.Printf("%+v\n", result)
 
 	// Output:
@@ -58,9 +49,9 @@ func Example_ma() {
 	// [25 25 25 35 45 55 65 75]
 }
 
-func Example_multiplySlice() {
+func Example_MultiplySlice() {
 	f1 := []float64{1.0, 2.0, 3.0}
-	result := multiplySlice(1.1, f1)
+	result := MultiplySlice(1.1, f1)
 	for i := range result {
 		result[i] = goutil.Round(result[i], 4)
 	}
@@ -70,8 +61,8 @@ func Example_multiplySlice() {
 	// [1.1 2.2 3.3]
 }
 
-func Example_multiplySliceGated() {
-	result := multiplySliceGated(
+func Example_MultiplySliceGated() {
+	result := MultiplySliceGated(
 		2.0,
 		[]float64{1.0, 2.0, 3.0, 4.0, 5.0},
 		[]int{Buy, Sell, Sell, Buy, Buy}, Sell)
@@ -81,16 +72,16 @@ func Example_multiplySliceGated() {
 	// [1 4 6 4 5]
 }
 
-func Example_multiplySlices() {
+func Example_MultiplySlices() {
 	f1 := []float64{1.0, 2.0, 3.0}
 	f2 := []float64{10.0, 20.0, 30.0}
-	result := multiplySlices(f1, f2)
+	result := MultiplySlices(f1, f2)
 	fmt.Printf("%+v\n", result)
 
 	f1 = []float64{1.0, 2.0, 3.0}
 	f2 = []float64{10.0, 20.0, 30.0}
 	f3 := []float64{100.0, 200.0, 300.0}
-	result = multiplySlices(f1, f2, f3)
+	result = MultiplySlices(f1, f2, f3)
 	fmt.Printf("%+v\n", result)
 
 	// Output:
@@ -98,33 +89,33 @@ func Example_multiplySlices() {
 	// [1000 8000 27000]
 }
 
-func Example_offsetSlice() {
-	result := offsetSlice(2.0, []float64{1.0, 2.0, 3.0, 4.0, 5.0})
+func Example_OffsetSlice() {
+	result := OffsetSlice(2.0, []float64{1.0, 2.0, 3.0, 4.0, 5.0})
 	fmt.Printf("%+v\n", result)
 
 	// Output:
 	// [3 4 5 6 7]
 }
 
-func Example_reciprocolSlice() {
-	result := reciprocolSlice([]float64{1.0, 2.0, 4.0, 5.0})
+func Example_ReciprocolSlice() {
+	result := ReciprocolSlice([]float64{1.0, 2.0, 4.0, 5.0})
 	fmt.Printf("%+v\n", result)
 
 	// Output:
 	// [1 0.5 0.25 0.2]
 }
 
-func Example_slicesAreEqualLength() {
+func Example_SlicesAreEqualLength() {
 	f1 := []float64{1.0, 2.0, 3.0, 4.0}
 	f2 := []float64{10.0, 20.0, 30.0, 40.0}
-	result := slicesAreEqualLength(f1, f2)
+	result := SlicesAreEqualLength(f1, f2)
 	if result != nil {
 		fmt.Printf("result was not nil but was supposed to be")
 	}
 
 	f1 = []float64{1.0, 2.0, 3.0}
 	f2 = []float64{10.0, 20.0, 30.0, 40.0}
-	result = slicesAreEqualLength(f1, f2)
+	result = SlicesAreEqualLength(f1, f2)
 	if result != nil {
 		fmt.Printf("result was not nil but was supposed to be")
 	}
@@ -132,23 +123,23 @@ func Example_slicesAreEqualLength() {
 	// Output:
 	// result was not nil but was supposed to be
 }
-func Example_sumSlices() {
+func Example_SumSlices() {
 	f1 := []float64{1.0, 2.0, 3.0, 4.0}
 	f2 := []float64{10.0, 20.0, 30.0}
-	result := sumSlices(f1, f2)
+	result := SumSlices(f1, f2)
 	if result != nil {
 		fmt.Printf("result was not nil but was supposed to be")
 	}
 
 	f1 = []float64{1.0, 2.0, 3.0}
 	f2 = []float64{10.0, 20.0, 30.0}
-	result = sumSlices(f1, f2)
+	result = SumSlices(f1, f2)
 	fmt.Printf("%+v\n", result)
 
 	f1 = []float64{1.0, 2.0, 3.0}
 	f2 = []float64{10.0, 20.0, 30.0}
 	f3 := []float64{100.0, 200.0, 300.0}
-	result = sumSlices(f1, f2, f3)
+	result = SumSlices(f1, f2, f3)
 	fmt.Printf("%+v\n", result)
 
 	// Output:
@@ -175,15 +166,15 @@ func Example_tradeGain() {
 		time.Date(2022, 1, 7, 0, 0, 0, 0, time.UTC),
 		time.Date(2022, 1, 8, 0, 0, 0, 0, time.UTC)}
 	issue.Symbol = "test"
-	_, gain, tradeG := tradeGain(2, trade____, issue)
+	_, gain, tradeG := TradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 
 	trade____ = []int{sel, sel, sel, sel, Buy, Buy, Buy, sel}
-	_, gain, tradeG = tradeGain(2, trade____, issue)
+	_, gain, tradeG = TradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 
 	trade____ = []int{sel, sel, sel, sel, sel, Buy, Buy, Buy}
-	_, gain, tradeG = tradeGain(2, trade____, issue)
+	_, gain, tradeG = TradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 
 	// Output:

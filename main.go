@@ -21,6 +21,7 @@ import (
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/downloader/financeYahoo"
 	"github.com/paulfdunn/go-quantstudio/quant"
+	"github.com/paulfdunn/go-quantstudio/quant/quantMA"
 	"github.com/paulfdunn/logh"
 )
 
@@ -91,6 +92,7 @@ func Init() {
 
 	downloader.Init(appName)
 	quant.Init(appName)
+	quantMA.Init(appName)
 
 	dlGroupChan = make(chan *downloader.Group, 1)
 }
@@ -160,7 +162,7 @@ func downloadYahooData(liveData bool, dataFilepath string, symbols []string, dlG
 }
 
 // plotlyJSON writes plot data as JSON into w
-func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
+func plotlyJSON(qIssue quantMA.Issue, w io.Writer) error {
 	reply := map[string]interface{}{
 		// https://plotly.com/javascript/basic-charts/
 		// https://plotly.com/javascript/reference/index/
@@ -217,7 +219,7 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 				"x": qIssue.DownloaderIssue.DatasetAsColumns.Date,
 				// "y":     qIssue.DownloaderIssue.DatasetAsColumns.Volume,
 				// "name":  "Volume",
-				"y":     qIssue.QuantsetAsColumns.TradeResults.TradeMA,
+				"y":     qIssue.QuantsetAsColumns.Results.TradeMA,
 				"name":  "TradeMA",
 				"type":  "scatter",
 				"yaxis": "y2",
@@ -229,7 +231,7 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 				"x": qIssue.DownloaderIssue.DatasetAsColumns.Date,
 				// "y":     qIssue.DownloaderIssue.DatasetAsColumns.Volume,
 				// "name":  "Volume",
-				"y":    qIssue.QuantsetAsColumns.TradeResults.TradeGainVsTime,
+				"y":    qIssue.QuantsetAsColumns.Results.TradeGainVsTime,
 				"name": "TradeGainVsTime",
 				"type": "scatter",
 				// "yaxis": "y3",
@@ -303,7 +305,7 @@ func plotlyJSON(qIssue quant.Issue, w io.Writer) error {
 			// 	"position":   0.93,
 			// },
 		},
-		"text": qIssue.QuantsetAsColumns.TradeResults.TradeHistory,
+		"text": qIssue.QuantsetAsColumns.Results.TradeHistory,
 	}
 
 	return json.NewEncoder(w).Encode(reply)
@@ -321,9 +323,9 @@ func runRange() {
 		splitResults[0] = 1.0
 		for j := range maSplit {
 			symbolResults := 1.0
-			qg := quant.GetGroup(dlGroup, maLength[i], maSplit[j])
+			qg := quantMA.GetGroup(dlGroup, maLength[i], maSplit[j])
 			for _, iss := range qg.Issues {
-				symbolResults *= iss.QuantsetAsColumns.TradeResults.AnnualizedGain
+				symbolResults *= iss.QuantsetAsColumns.Results.AnnualizedGain
 			}
 			splitResults[j] = symbolResults
 		}
@@ -357,7 +359,7 @@ func wrappedSymbols(symbols []string) http.HandlerFunc {
 
 func wrappedPlotlyHandler(dlGroupChan chan *downloader.Group) http.HandlerFunc {
 	var dlGroup *downloader.Group
-	var qGroup *quant.Group
+	var qGroup *quantMA.Group
 	return func(w http.ResponseWriter, r *http.Request) {
 		symbol := r.URL.Query().Get("symbol")
 		mal := r.URL.Query().Get("maLength")
@@ -375,7 +377,7 @@ func wrappedPlotlyHandler(dlGroupChan chan *downloader.Group) http.HandlerFunc {
 
 		select {
 		case dlGroup = <-dlGroupChan:
-			qGroup = quant.GetGroup(dlGroup, maLength, maSplit)
+			qGroup = quantMA.GetGroup(dlGroup, maLength, maSplit)
 		default:
 		}
 		symbolIndex := -1
