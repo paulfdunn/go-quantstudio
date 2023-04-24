@@ -172,7 +172,7 @@ func SumSlices(dataSlices ...[]float64) []float64 {
 // Trade delays delay number of points, then compares price to the buyLevel and sellLevel,
 // and returns an output slice indicating Buy or Sell at
 // each point. Note that Sell is returned for the first delay number of points.
-func Trade(delay int, close, price, buyLevel, sellLevel []float64) []int {
+func TradeOnPrice(delay int, close, price, buyLevel, sellLevel []float64) []int {
 	if err := SlicesAreEqualLength(close, price); err != nil {
 		return nil
 	}

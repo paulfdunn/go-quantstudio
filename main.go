@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -14,7 +13,6 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime/debug"
-	"strconv"
 	"strings"
 
 	"github.com/paulfdunn/go-quantstudio/defs"
@@ -30,7 +28,7 @@ var (
 	appName = defs.AppName
 
 	// CLI flags
-	liveDataPtr, runRangePtr                *bool
+	liveDataPtr, runMARangePtr              *bool
 	groupNamePtr, logFilePtr, symbolCSVList *string
 	logLevel                                *int
 
@@ -76,7 +74,7 @@ func Init() {
 	logFilePtr = flag.String("logfile", "", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
-	runRangePtr = flag.Bool("runrange", false, "When true, runs a range of parameters and exits.")
+	runMARangePtr = flag.Bool("runMArange", false, "When true, runs a range of moving average parameters and exits.")
 	symbolCSVList = flag.String("symbolCSVList", defs.SymbolsDefault, "Comma separated list of symbols for which to download prices")
 	flag.Parse()
 
@@ -111,16 +109,16 @@ func main() {
 		logh.Map[appName].Printf(logh.Error, "error calling fs.Sub: %+v", err)
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
-	http.HandleFunc("/plotly", wrappedPlotlyHandler(dlGroupChan))
+	http.HandleFunc("/plotly", quantMA.WrappedPlotlyHandlerMA(dlGroupChan))
 	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, symbols, dlGroupChan))
 	http.HandleFunc("/symbols", wrappedSymbols(symbols))
 
 	// Download data and put it in dlGroupChan
 	downloadYahooData(*liveDataPtr, dataFilepath, symbols, dlGroupChan)
 
-	if *runRangePtr {
-		runRange()
-		logh.Map[appName].Println(logh.Info, "runRange complete...")
+	if *runMARangePtr {
+		runMARange()
+		logh.Map[appName].Println(logh.Info, "runMARange complete...")
 		os.Exit(0)
 	}
 
@@ -129,7 +127,7 @@ func main() {
 	target := fmt.Sprintf("/plotly?symbol=%s&maLength=%d&maSplit=%f", symbols[0], defs.MALengthDefault, defs.MASplitDefault)
 	req := httptest.NewRequest(http.MethodGet, target, nil)
 	w := httptest.NewRecorder()
-	wrappedPlotlyHandler(dlGroupChan)(w, req)
+	quantMA.WrappedPlotlyHandlerMA(dlGroupChan)(w, req)
 	// Download again (livedata is false, so this is loading the data downloaded above from file)
 	// as the above call consumed the data from the channel and the registered
 	// handler will not have data without calling downloadYahooData again.
@@ -161,157 +159,7 @@ func downloadYahooData(liveData bool, dataFilepath string, symbols []string, dlG
 	return nil
 }
 
-// plotlyJSON writes plot data as JSON into w
-func plotlyJSON(qIssue quantMA.Issue, w io.Writer) error {
-	reply := map[string]interface{}{
-		// https://plotly.com/javascript/basic-charts/
-		// https://plotly.com/javascript/reference/index/
-		// color picker:
-		// https://htmlcolorcodes.com/color-picker/
-		"data": []map[string]interface{}{
-			{
-				"x":     qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"high":  qIssue.QuantsetAsColumns.PriceNormalizedHigh,
-				"low":   qIssue.QuantsetAsColumns.PriceNormalizedLow,
-				"open":  qIssue.QuantsetAsColumns.PriceNormalizedOpen,
-				"close": qIssue.QuantsetAsColumns.PriceNormalizedClose,
-				"name":  "Prices",
-				"type":  "candlestick",
-				// "xaxis": "x2",
-			},
-			{
-				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":    qIssue.QuantsetAsColumns.PriceMALow,
-				"name": "MALow",
-				"type": "scatter",
-				// "stackgroup": "one",
-				"line": map[string]interface{}{
-					"color": "rgba(255,65,54,0.5)",
-				},
-				// "xaxis": "x2",
-			},
-			{
-				"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":         qIssue.QuantsetAsColumns.PriceMA,
-				"name":      "MA",
-				"type":      "scatter",
-				"fill":      "tonexty",
-				"fillcolor": "rgba(255,164,157,0.3)",
-				"line": map[string]interface{}{
-					"color": "rgba(255,65,54,0.5)",
-				},
-				// "xaxis": "x2",
-			},
-			{
-				"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":         qIssue.QuantsetAsColumns.PriceMAHigh,
-				"name":      "MAHigh",
-				"type":      "scatter",
-				"fill":      "tonexty",
-				"fillcolor": "rgba(0, 140, 8, 0.3)",
-				"line": map[string]interface{}{
-					"color": "rgba(0, 140, 8, 0.5)",
-				},
-				// "xaxis": "x2",
-			},
-			// Second chart
-			{
-				"x": qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				// "y":     qIssue.DownloaderIssue.DatasetAsColumns.Volume,
-				// "name":  "Volume",
-				"y":     qIssue.QuantsetAsColumns.Results.TradeMA,
-				"name":  "TradeMA",
-				"type":  "scatter",
-				"yaxis": "y2",
-				"line": map[string]interface{}{
-					"color": "rgba(255, 172, 47,1.0)",
-				},
-			},
-			{
-				"x": qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				// "y":     qIssue.DownloaderIssue.DatasetAsColumns.Volume,
-				// "name":  "Volume",
-				"y":    qIssue.QuantsetAsColumns.Results.TradeGainVsTime,
-				"name": "TradeGainVsTime",
-				"type": "scatter",
-				// "yaxis": "y3",
-				"line": map[string]interface{}{
-					"color": "rgba(0, 139, 147,1.0)",
-				},
-			},
-		},
-		"layout": map[string]interface{}{
-			"spikedistance": 50,
-			"hoverdistance": 50,
-			"autosize":      true,
-			"title":         qIssue.DownloaderIssue.Symbol,
-			"grid": map[string]int{
-				"rows":    1,
-				"columns": 1,
-			},
-			"xaxis": map[string]interface{}{
-				"domain": []float64{0.0, 0.9},
-				// breaks vertical zoom
-				// "fixedrange": true,
-				"rangeslider": map[string]interface{}{
-					"visible": false,
-				},
-				"showspikes":     true,
-				"spikemode":      "across",
-				"spikedash":      "solid",
-				"spikecolor":     "#000000",
-				"spikethickness": 1,
-			},
-			// Second chart
-			// "xaxis2": map[string]interface{}{
-			// breaks vertical zoom
-			// 	"fixedrange": true,
-			// 	"rangeslider": map[string]interface{}{
-			// 		"visible": false,
-			// 	},
-			// 	"showspikes":     true,
-			// 	"spikemode":      "across",
-			// 	"spikedash":      "solid",
-			// 	"spikecolor":     "#000000",
-			// 	"spikethickness": 1,
-			// },
-			"yaxis": map[string]interface{}{
-				"title":      "Price ($ - normalized), Trade Gain",
-				"autorange":  true,
-				"fixedrange": false,
-				"type":       "log",
-			},
-			"yaxis2": map[string]interface{}{
-				"title":     fmt.Sprintf("Trade (algorithm:moving average, buy=%d, sell=%d)", quant.Buy, quant.Sell),
-				"autorange": false,
-				"range":     []float64{0.0, 1.0},
-				"tick0":     0,
-				"dtick":     1.0,
-				// "type":       "log",
-				// Below are only needed when using single row
-				"anchor":     "x",
-				"overlaying": "y",
-				"side":       "right",
-			},
-			// "yaxis3": map[string]interface{}{
-			// 	"title":      "Trade Gain (%)",
-			// 	"autorange":  true,
-			// 	"fixedrange": false,
-			// 	"type":       "log",
-			// 	// Below are only needed when using single row
-			// 	"anchor":     "free",
-			// 	"overlaying": "y",
-			// 	"side":       "right",
-			// 	"position":   0.93,
-			// },
-		},
-		"text": qIssue.QuantsetAsColumns.Results.TradeHistory,
-	}
-
-	return json.NewEncoder(w).Encode(reply)
-}
-
-func runRange() {
+func runMARange() {
 	dlGroup := <-dlGroupChan
 	// maLength := []int{200}
 	// maSplit := []float64{0.05}
@@ -332,7 +180,7 @@ func runRange() {
 		results[i] = splitResults
 	}
 
-	logh.Map[appName].Printf(logh.Info, "runRange output result is product of all symbol AnnualizedGain values")
+	logh.Map[appName].Printf(logh.Info, "runMARange output result is product of all symbol AnnualizedGain values")
 	logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maSplit: %+v\n", maSplit))
 	for i := range results {
 		logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maLength: %d %+v\n", maLength[i], results[i]))
@@ -354,47 +202,5 @@ func wrappedSymbols(symbols []string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(symbols)
-	}
-}
-
-func wrappedPlotlyHandler(dlGroupChan chan *downloader.Group) http.HandlerFunc {
-	var dlGroup *downloader.Group
-	var qGroup *quantMA.Group
-	return func(w http.ResponseWriter, r *http.Request) {
-		symbol := r.URL.Query().Get("symbol")
-		mal := r.URL.Query().Get("maLength")
-		maLength, err := strconv.Atoi(mal)
-		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "error converting maLength value '%s' to int", mal)
-			return
-		}
-		mas := r.URL.Query().Get("maSplit")
-		maSplit, err := strconv.ParseFloat(mas, 64)
-		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "error converting maSplit value '%s' to float", mas)
-			return
-		}
-
-		select {
-		case dlGroup = <-dlGroupChan:
-			qGroup = quantMA.GetGroup(dlGroup, maLength, maSplit)
-		default:
-		}
-		symbolIndex := -1
-		for i, v := range dlGroup.Issues {
-			if strings.EqualFold(v.Symbol, symbol) {
-				symbolIndex = i
-				break
-			}
-		}
-		if symbolIndex == -1 {
-			logh.Map[appName].Printf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", symbol)
-			w.WriteHeader(http.StatusNotFound)
-			return
-		}
-		qGroup.UpdateIssue(symbolIndex, maLength, maSplit)
-		if err := plotlyJSON(qGroup.Issues[symbolIndex], w); err != nil {
-			log.Printf("issue: %s", err)
-		}
 	}
 }
