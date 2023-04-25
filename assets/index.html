@@ -38,7 +38,7 @@
 					width: 20em;
 					height: 4em;
 				}
-				#chartMA {
+				#chartMAChart {
 					width: var(--chartWidth);
 					height: 800px;
 				}
@@ -50,18 +50,20 @@
 	</head>
 	<body>
 		<h3>go-quantstudio</h3>
-		Symbol: <input id="symbol" value="spy" >  
-		MaLength: <input id="maLength" value="200">
-		MaSplit: <input id="maSplit" value="0.05">
-		<button id="process">Process</button>
-		<button id="downloadData">Download Data</button>
-		<label for="symbols">Loaded symbols</label>
-		<textarea readonly id="symbols" name="symbols"></textarea>
-		<hr />
-		<div id="chartMA"></div>
-		<div id="history">
-			<p><label for="tradeHistory">Trade history:</label></p>
-			<textarea readonly id="tradeHistory" name="tradeHistory"></textarea>
+		<div id="chartMA">
+			Symbol: <input id="symbol" value="spy" >  
+			MaLength: <input id="maLength" value="200">
+			MaSplit: <input id="maSplit" value="0.05">
+			<button id="process">Process</button>
+			<button id="downloadData">Download Data</button>
+			<label for="symbols">Loaded symbols</label>
+			<textarea readonly id="symbols" name="symbols"></textarea>
+			<hr />
+			<div id="chartMAChart"></div>
+			<div id="history">
+				<p><label for="tradeHistory">Trade history:</label></p>
+				<textarea readonly id="tradeHistory" name="tradeHistory"></textarea>
+			</div>
 		</div>
 	</body>
 	<script>

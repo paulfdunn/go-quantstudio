@@ -4,7 +4,7 @@ async function updateChartMA() {
     let maSplit = document.getElementById('maSplit').value;
     let response = await fetch('/plotly-ma?symbol=' + symbol + '&maLength=' + maLength+ '&maSplit=' + maSplit);
     let reply = await response.json(); 
-    Plotly.newPlot('chartMA', reply.data, reply.layout);
+    Plotly.newPlot('chartMAChart', reply.data, reply.layout);
     tradeHistory.innerHTML = reply.text;
 }
 
