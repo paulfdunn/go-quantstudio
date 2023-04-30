@@ -74,7 +74,7 @@ func main() {
 	screenShotUrl := fmt.Sprintf("http://%s/", "localhost:8080")
 	symbols, err := getLoadedSymbols()
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "Automator could not load symbols from go-quantstudio, exiting.")
+		logh.Map[appName].Printf(logh.Error, "automator could not load symbols from go-quantstudio, exiting.")
 		os.Exit(1)
 	}
 
@@ -143,19 +143,19 @@ func getChromedpScreenShotsForAllSymbols(screenShotUrl string, dataDirectory str
 func getLoadedSymbols() ([]string, error) {
 	resp, err := http.Get(fmt.Sprintf("http://localhost%s/symbols", defs.GUIPort))
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "error getting symbols: %s", err)
+		logh.Map[appName].Printf(logh.Error, "getting symbols: %s", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "error getting symbol bytes: %s", err)
+		logh.Map[appName].Printf(logh.Error, "getting symbol bytes: %s", err)
 		return nil, err
 	}
 	var symbols []string
 	err = json.Unmarshal(body, &symbols)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "error unmarshalling symbols: %s", err)
+		logh.Map[appName].Printf(logh.Error, "unmarshalling symbols: %s", err)
 		return nil, err
 	}
 

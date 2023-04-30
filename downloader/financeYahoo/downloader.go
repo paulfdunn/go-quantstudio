@@ -3,6 +3,7 @@ package financeYahoo
 import (
 	"encoding/csv"
 	"errors"
+	"math"
 	"strings"
 	"time"
 
@@ -57,7 +58,7 @@ func mapURLCollectionDataHeaderIndices(urlCollectionDataCSVHeader []string) (url
 	}
 
 	if _, ok := urlCollectionDataHeaderIndicesMap["Date"]; !ok {
-		logh.Map[appName].Printf(logh.Error, "No Date field in data, records[0]:%+v", urlCollectionDataCSVHeader)
+		logh.Map[appName].Printf(logh.Error, "no Date field in data, records[0]:%+v", urlCollectionDataCSVHeader)
 		return nil, err
 	}
 
@@ -124,16 +125,24 @@ func urlCollectionDataToStructure(symbol string, records [][]string, urlCollecti
 
 		date, err := time.Parse(dl.DateFormat, record[urlCollectionDataHeaderIndicesMap["Date"]])
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "Cannot parse date:%v", record[urlCollectionDataHeaderIndicesMap["Date"]])
+			logh.Map[appName].Printf(logh.Error, "cannot parse date:%v", record[urlCollectionDataHeaderIndicesMap["Date"]])
 			continue
 		}
 
 		floatRecord, err := dl.StringRecordToFloat64Record(record, []int{urlCollectionDataHeaderIndicesMap["Date"]}, symbol)
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "Cannot parse record to float:%+v", record)
+			logh.Map[appName].Printf(logh.Error, "cannot parse record to float, symbol: %s, record:%+v", symbol, record)
 			continue
 		}
 		adj := floatRecord[urlCollectionDataHeaderIndicesMap["AdjClose"]] / floatRecord[urlCollectionDataHeaderIndicesMap["Close"]]
+		// Some issues have weekend and holiday dates with price data that is all zeros.
+		if math.IsNaN(adj) {
+			if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
+				continue
+			}
+			logh.Map[appName].Printf(logh.Warning, "adj is NaN (Close was 0) on weekday (may be holiday), symbol: %s, date: %s", symbol, date)
+			continue
+		}
 
 		data = append(data, dl.Data{
 			Date:     date,

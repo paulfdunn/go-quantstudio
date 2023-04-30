@@ -47,8 +47,9 @@ go build && ./go-quantstudio -logfile=log.txt
 
 Or, if you'd like the output logged to file AND dumped to the terminal:
 ```
-go build && ./go-quantstudio -logfile=log.txt | tail -f $HOME/tmp/go-quantstudio/log.txt.0
+go build && ./go-quantstudio -logfile=log.txt | sleep 1 && tail -f $HOME/tmp/go-quantstudio/log.txt.0
 ```
+Note the sleep is only there to insure the application starts running and clears the current log before starting the tail.
 
 ## Suggested use if you'd like daily automatic updates for the output
 Sync the output folder to Google Drive, or another similar service, and always have the latest data ready for your viewing, on any device.
