@@ -109,6 +109,7 @@ func urlCollectionDataToGroup(urlData []httph.URLCollectionData, urlSymbolMap ma
 func urlCollectionDataToStructure(symbol string, records [][]string, urlCollectionDataHeaderIndicesMap map[string]int, orderAsc bool) (data []dl.Data) {
 	// Convert the RawData into structured Data.
 	data = make([]dl.Data, 0)
+	cummulativeNulls := 0
 	for i := range records {
 		// Skip the header row.
 		if i == 0 {
@@ -129,7 +130,8 @@ func urlCollectionDataToStructure(symbol string, records [][]string, urlCollecti
 			continue
 		}
 
-		floatRecord, err := dl.StringRecordToFloat64Record(record, []int{urlCollectionDataHeaderIndicesMap["Date"]}, symbol)
+		floatRecord, nulls, err := dl.StringRecordToFloat64Record(record, []int{urlCollectionDataHeaderIndicesMap["Date"]}, symbol)
+		cummulativeNulls += nulls
 		if err != nil {
 			logh.Map[appName].Printf(logh.Error, "cannot parse record to float, symbol: %s, record:%+v", symbol, record)
 			continue
@@ -157,5 +159,10 @@ func urlCollectionDataToStructure(symbol string, records [][]string, urlCollecti
 			AdjClose: floatRecord[urlCollectionDataHeaderIndicesMap["AdjClose"]],
 		})
 	}
+
+	if cummulativeNulls > 0 {
+		logh.Map[appName].Printf(logh.Warning, "symbol: %s, total null values in records: %d", symbol, cummulativeNulls)
+	}
+
 	return data
 }

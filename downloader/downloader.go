@@ -172,14 +172,15 @@ func LoadURLCollectionDataFromFile(dataFilePath string) (urlData []httph.URLColl
 	return urlData, nil
 }
 
-func StringRecordToFloat64Record(record []string, skipIndices []int, symbol string) (out []float64, err error) {
+func StringRecordToFloat64Record(record []string, skipIndices []int, symbol string) (out []float64, nulls int, err error) {
 	out = make([]float64, len(record))
 	for i, v := range record {
 		if goutil.InIntSlice(i, skipIndices) {
 			continue
 		}
 		if v == "null" {
-			logh.Map[appName].Printf(logh.Warning, "null value in record, cannot parse to float, symbol: %s, record:%+v", symbol, record)
+			logh.Map[appName].Printf(logh.Debug, "null value in record, cannot parse to float, symbol: %s, record:%+v", symbol, record)
+			nulls++
 			continue
 		}
 		out[i], err = strconv.ParseFloat(v, 64)
@@ -187,10 +188,10 @@ func StringRecordToFloat64Record(record []string, skipIndices []int, symbol stri
 		if err != nil {
 			err := fmt.Errorf("converting to float, err%v\nsymbol: %s, record:%+v", err, symbol, record)
 			logh.Map[appName].Printf(logh.Error, "%+v", err)
-			return nil, err
+			return nil, nulls, err
 		}
 	}
-	return out, nil
+	return out, nulls, nil
 }
 
 func URLCollectionDataDateOrder(records [][]string, urlCollectionDataHeaderIndicesMap map[string]int) (orderAsc bool,
