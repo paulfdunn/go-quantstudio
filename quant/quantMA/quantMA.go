@@ -37,14 +37,18 @@ type QuantMA struct {
 
 var (
 	appName string
+	lp      func(level logh.LoghLevel, v ...interface{})
+	lpf     func(level logh.LoghLevel, format string, v ...interface{})
 )
 
 func Init(appNameInit string) {
 	appName = appNameInit
+	lp = logh.Map[appName].Println
+	lpf = logh.Map[appName].Printf
 }
 
 func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLength int, maSplit float64) *Group {
-	logh.Map[appName].Printf(logh.Info, "calling quant.Run with maLength: %d, maSplit: %5.2f", maLength, maSplit)
+	lpf(logh.Info, "calling quant.Run with maLength: %d, maSplit: %5.2f", maLength, maSplit)
 	group := Group{Name: downloaderGroup.Name}
 	group.Issues = make([]Issue, len(downloaderGroup.Issues))
 
@@ -64,13 +68,13 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 
 func (grp Group) String() string {
 	out, err := json.MarshalIndent(grp, "", "  ")
-	logh.Map[appName].Printf(logh.Error, "calling json.MarshalIndent: %s", err)
+	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
 	return string(goutil.PrettyJSON(out))
 }
 
 func (iss Issue) String() string {
 	out, err := json.MarshalIndent(iss, "", "  ")
-	logh.Map[appName].Printf(logh.Error, "calling json.MarshalIndent: %s", err)
+	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
 	return string(goutil.PrettyJSON(out))
 }
 
@@ -115,13 +119,13 @@ func WrappedPlotlyHandlerMA(dlGroupChan chan *downloader.Group, tradingSymbols [
 		mal := r.URL.Query().Get("maLength")
 		maLength, err := strconv.Atoi(mal)
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "converting maLength value '%s' to int", mal)
+			lpf(logh.Error, "converting maLength value '%s' to int", mal)
 			return
 		}
 		mas := r.URL.Query().Get("maSplit")
 		maSplit, err := strconv.ParseFloat(mas, 64)
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "converting maSplit value '%s' to float", mas)
+			lpf(logh.Error, "converting maSplit value '%s' to float", mas)
 			return
 		}
 
@@ -129,10 +133,10 @@ func WrappedPlotlyHandlerMA(dlGroupChan chan *downloader.Group, tradingSymbols [
 		case dlGroup = <-dlGroupChan:
 			qGroup = GetGroup(dlGroup, trdSymbols, maLength, maSplit)
 		default:
-			logh.Map[appName].Println(logh.Debug, "using previously retrieved qGroup")
+			lp(logh.Debug, "using previously retrieved qGroup")
 		}
 		if !goutil.InStringSlice(urlSymbol, tradingSymbols) {
-			logh.Map[appName].Printf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", urlSymbol)
+			lpf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", urlSymbol)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -144,13 +148,13 @@ func WrappedPlotlyHandlerMA(dlGroupChan chan *downloader.Group, tradingSymbols [
 			}
 		}
 		if symbolIndex == -1 {
-			logh.Map[appName].Printf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", urlSymbol)
+			lpf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", urlSymbol)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
 		qGroup.UpdateIssue(symbolIndex, maLength, maSplit)
 		if err := plotlyJSON(qGroup.Issues[symbolIndex], w); err != nil {
-			logh.Map[appName].Printf(logh.Error, "issue: %s\n%+v", err, qGroup.Issues[symbolIndex])
+			lpf(logh.Error, "issue: %s\n%+v", err, qGroup.Issues[symbolIndex])
 		}
 	}
 }

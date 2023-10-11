@@ -29,6 +29,8 @@ var (
 	// CLI flags
 	logFilePtr *string
 	logLevel   *int
+	lp         func(level logh.LoghLevel, v ...interface{})
+	lpf        func(level logh.LoghLevel, format string, v ...interface{})
 
 	// dataDirectorySuffix is appended to the users home directory.
 	dataDirectorySuffix = filepath.Join(`tmp`, defs.AppName, appName)
@@ -36,8 +38,6 @@ var (
 )
 
 func Init() {
-	defer crashDetect()
-
 	usr, err := user.Current()
 	if err != nil {
 		fmt.Printf("Error getting user.Currrent: %+v", err)
@@ -62,19 +62,21 @@ func Init() {
 	logh.New(appName, logFilepath, logh.DefaultLevels, logh.LoghLevel(*logLevel),
 		logh.DefaultFlags, 100, int64(10e6))
 
-	logh.Map[appName].Printf(logh.Debug, "user.Current(): %+v", usr)
+	lpf(logh.Debug, "user.Current(): %+v", usr)
 }
 
 func main() {
 	defer crashDetect()
 
 	Init()
+	lp = logh.Map[appName].Println
+	lpf = logh.Map[appName].Printf
 
 	// Get the symbols that are loaded in go-quantstudio, then get screen shots for all symbols
 	screenShotUrl := fmt.Sprintf("http://%s/", "localhost:8080")
 	symbols, err := getLoadedSymbols()
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "automator could not load symbols from go-quantstudio, exiting.")
+		lpf(logh.Error, "automator could not load symbols from go-quantstudio, exiting.")
 		os.Exit(1)
 	}
 
@@ -94,7 +96,7 @@ func clickDownloadData(screenShotUrl string) {
 	ctx, cancel := chromedp.NewContext(actx)
 	defer cancel()
 
-	logh.Map[appName].Printf(logh.Info, "Downloading data.")
+	lpf(logh.Info, "Downloading data.")
 	//configuring a set of tasks to be run
 	tasks := chromedp.Tasks{
 		//loads page of the URL
@@ -115,16 +117,16 @@ func crashDetect() {
 	if err := recover(); err != nil {
 		errOut := fmt.Sprintf("panic: %+v\n%+v", err, string(debug.Stack()))
 		fmt.Println(errOut)
-		logh.Map[appName].Println(logh.Error, errOut)
+		lp(logh.Error, errOut)
 		errShutdown := logh.ShutdownAll()
 		if errShutdown != nil {
-			logh.Map[appName].Printf(logh.Error, fmt.Sprintf("%#v", errShutdown))
+			lpf(logh.Error, fmt.Sprintf("%#v", errShutdown))
 		}
 	}
 }
 
 func getChromedpScreenShotsForAllSymbols(screenShotUrl string, dataDirectory string, symbols []string, quality int) {
-	logh.Map[appName].Printf(logh.Info, "Making request for screenshot using %s", screenShotUrl)
+	lpf(logh.Info, "Making request for screenshot using %s", screenShotUrl)
 
 	for {
 		for _, symbol := range symbols {
@@ -143,19 +145,19 @@ func getChromedpScreenShotsForAllSymbols(screenShotUrl string, dataDirectory str
 func getLoadedSymbols() ([]string, error) {
 	resp, err := http.Get(fmt.Sprintf("http://localhost%s/symbols", defs.GUIPort))
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "getting symbols: %s", err)
+		lpf(logh.Error, "getting symbols: %s", err)
 		return nil, err
 	}
 	defer resp.Body.Close()
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "getting symbol bytes: %s", err)
+		lpf(logh.Error, "getting symbol bytes: %s", err)
 		return nil, err
 	}
 	var symbols []string
 	err = json.Unmarshal(body, &symbols)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "unmarshalling symbols: %s", err)
+		lpf(logh.Error, "unmarshalling symbols: %s", err)
 		return nil, err
 	}
 
@@ -185,7 +187,7 @@ func getScreenshotForSymbol(screenShotUrl string, symbol string, quality int) {
 	ctx, cancel := chromedp.NewContext(actx)
 	defer cancel()
 
-	logh.Map[appName].Printf(logh.Info, "getting screenshot for symbol:%s", symbol)
+	lpf(logh.Info, "getting screenshot for symbol:%s", symbol)
 	//configuring a set of tasks to be run
 	tasks := chromedp.Tasks{
 		//loads page of the URL
@@ -214,7 +216,7 @@ func getScreenshotForSymbol(screenShotUrl string, symbol string, quality int) {
 	}
 
 	//log completion and file name to
-	logh.Map[appName].Printf(logh.Info, "Saved screenshot to file %s", filename)
+	lpf(logh.Info, "Saved screenshot to file %s", filename)
 
 }
 
@@ -225,9 +227,9 @@ func getScreenshotForSymbol(screenShotUrl string, symbol string, quality int) {
 
 // 		case *network.EventResponseReceived:
 // 			resp := ev.Response
-// 			logh.Map[appName].Printf(logh.Info, "response status: %d", resp.Status)
+// 			lpf(logh.Info, "response status: %d", resp.Status)
 // 			if len(resp.Headers) != 0 {
-// 				logh.Map[appName].Printf(logh.Debug, "received headers: %s", resp.Headers)
+// 				lpf(logh.Debug, "received headers: %s", resp.Headers)
 // 			}
 // 		}
 // 	})
@@ -256,13 +258,13 @@ func waitUntil(nextAfternoon time.Time, statusUpdateRate time.Duration) {
 	lastStatus := time.Now().Add(-2 * statusUpdateRate)
 	for {
 		if time.Now().After(nextAfternoon) {
-			logh.Map[appName].Printf(logh.Info, "Time was after %+v, continuing.", nextAfternoon)
+			lpf(logh.Info, "Time was after %+v, continuing.", nextAfternoon)
 			break
 		}
 
 		// Output status messages, but rate limit.
 		if time.Now().After(lastStatus.Add(statusUpdateRate)) {
-			logh.Map[appName].Printf(logh.Info, "Waiting for %+v", nextAfternoon)
+			lpf(logh.Info, "Waiting for %+v", nextAfternoon)
 			lastStatus = time.Now()
 		}
 

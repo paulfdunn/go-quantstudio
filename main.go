@@ -26,6 +26,8 @@ import (
 var (
 	// Only needed to shorten the log statements
 	appName = defs.AppName
+	lp      func(level logh.LoghLevel, v ...interface{})
+	lpf     func(level logh.LoghLevel, format string, v ...interface{})
 
 	// CLI flags
 	liveDataPtr, runMARangePtr              *bool
@@ -46,17 +48,15 @@ func crashDetect() {
 	if err := recover(); err != nil {
 		errOut := fmt.Sprintf("panic: %+v\n%+v", err, string(debug.Stack()))
 		fmt.Println(errOut)
-		logh.Map[appName].Println(logh.Error, errOut)
+		lp(logh.Error, errOut)
 		errShutdown := logh.ShutdownAll()
 		if errShutdown != nil {
-			logh.Map[appName].Printf(logh.Error, fmt.Sprintf("%#v", errShutdown))
+			lpf(logh.Error, fmt.Sprintf("%#v", errShutdown))
 		}
 	}
 }
 
 func Init() {
-	defer crashDetect()
-
 	usr, err := user.Current()
 	if err != nil {
 		fmt.Printf("Error getting user.Currrent: %+v", err)
@@ -84,8 +84,7 @@ func Init() {
 	}
 	logh.New(appName, logFilepath, logh.DefaultLevels, logh.LoghLevel(*logLevel),
 		logh.DefaultFlags, 100, int64(10e6))
-
-	logh.Map[appName].Printf(logh.Debug, "user.Current(): %+v", usr)
+	logh.Map[appName].Println(logh.Debug, "user.Current(): %+v", usr)
 	logh.Map[appName].Printf(logh.Info, "Data and logs being saved to directory: %s", dataDirectory)
 
 	downloader.Init(appName)
@@ -100,6 +99,8 @@ func main() {
 	defer crashDetect()
 
 	Init()
+	lp = logh.Map[appName].Println
+	lpf = logh.Map[appName].Printf
 
 	dataFilepath := filepath.Join(dataDirectory, *groupNamePtr)
 	tradingSymbols := strings.Split(*symbolCSVList, ",")
@@ -107,7 +108,7 @@ func main() {
 	// adapted from https://github.com/353words/stocks/blob/main/index.html
 	fsSub, err := fs.Sub(staticFS, "assets")
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "calling fs.Sub: %+v", err)
+		lpf(logh.Error, "calling fs.Sub: %+v", err)
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
 	http.HandleFunc("/plotly-ma", quantMA.WrappedPlotlyHandlerMA(dlGroupChan, tradingSymbols))
@@ -117,13 +118,13 @@ func main() {
 	// Download data and put it in dlGroupChan
 	err = downloadYahooData(*liveDataPtr, dataFilepath, tradingSymbols, dlGroupChan)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "calling downloadYahooData: %+v", err)
+		lpf(logh.Error, "calling downloadYahooData: %+v", err)
 		os.Exit(0)
 	}
 
 	if *runMARangePtr {
 		runMARange(tradingSymbols)
-		logh.Map[appName].Println(logh.Info, "runMARange complete...")
+		lp(logh.Info, "runMARange complete...")
 		os.Exit(0)
 	}
 
@@ -138,9 +139,9 @@ func main() {
 	// handler will not have data without calling downloadYahooData again.
 	downloadYahooData(false, dataFilepath, tradingSymbols, dlGroupChan)
 
-	logh.Map[appName].Println(logh.Info, "******************************************************")
-	logh.Map[appName].Println(logh.Info, "GUI running, open a browser to http://localhost"+defs.GUIPort+",  CTRL-C to stop")
-	logh.Map[appName].Println(logh.Info, "******************************************************\n\n")
+	lp(logh.Info, "******************************************************")
+	lp(logh.Info, "GUI running, open a browser to http://localhost"+defs.GUIPort+",  CTRL-C to stop")
+	lp(logh.Info, "******************************************************\n\n")
 	if err := http.ListenAndServe(defs.GUIPort, nil); err != nil {
 		log.Fatal(err)
 	}
@@ -148,18 +149,18 @@ func main() {
 	// Should not get here unless the server has an error.
 	err = logh.ShutdownAll()
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, fmt.Sprintf("%#v", err))
+		lpf(logh.Error, fmt.Sprintf("%#v", err))
 	}
 }
 
 func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []string, dlGroupChan chan *downloader.Group) error {
 	allSymbols := append(tradingSymbols, strings.Split(defs.AnalysisSymbols, ",")...)
-	logh.Map[appName].Printf(logh.Info, "Downloading these symbols: %+v", allSymbols)
+	lpf(logh.Info, "Downloading these symbols: %+v", allSymbols)
 	group, err := financeYahoo.NewGroup(liveData, dataFilepath, *groupNamePtr, allSymbols)
-	logh.Map[appName].Println(logh.Info, "Downloading complete")
+	lp(logh.Info, "Downloading complete")
 	dlGroupChan <- group
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "calling NewGroup: %+v", err)
+		lpf(logh.Error, "calling NewGroup: %+v", err)
 		return err
 	}
 	return nil
@@ -186,10 +187,10 @@ func runMARange(tradingSymbols []string) {
 		results[i] = splitResults
 	}
 
-	logh.Map[appName].Printf(logh.Info, "runMARange output result is product of all symbol AnnualizedGain values")
-	logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maSplit: %+v\n", maSplit))
+	lpf(logh.Info, "runMARange output result is product of all symbol AnnualizedGain values")
+	lpf(logh.Info, fmt.Sprintf("maSplit: %+v\n", maSplit))
 	for i := range results {
-		logh.Map[appName].Printf(logh.Info, fmt.Sprintf("maLength: %d %+v\n", maLength[i], results[i]))
+		lpf(logh.Info, fmt.Sprintf("maLength: %d %+v\n", maLength[i], results[i]))
 	}
 }
 

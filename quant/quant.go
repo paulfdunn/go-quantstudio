@@ -26,6 +26,8 @@ const (
 
 var (
 	appName string
+	lp      func(level logh.LoghLevel, v ...interface{})
+	lpf     func(level logh.LoghLevel, format string, v ...interface{})
 
 	stopLoss      = 0.9
 	stopLossDelay = 15
@@ -33,6 +35,8 @@ var (
 
 func Init(appNameInit string) {
 	appName = appNameInit
+	lp = logh.Map[appName].Println
+	lpf = logh.Map[appName].Printf
 }
 
 // AnnualizedGain will return the annualized gain given a totalGain achieved between the startDate
@@ -145,7 +149,7 @@ func SlicesAreEqualLength(dataSlices ...[]float64) error {
 	for i := 1; i < slices; i++ {
 		if len(dataSlices[i-1]) != len(dataSlices[i]) {
 			err := fmt.Errorf("slices are different lengths, processing stopped")
-			logh.Map[appName].Printf(logh.Error, "%+v", err)
+			lpf(logh.Error, "%+v", err)
 			return err
 		}
 	}
@@ -249,7 +253,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 	fd := dlIssue.DatasetAsColumns.Date[0].Format(DateFormat)
 	ld := dlIssue.DatasetAsColumns.Date[len(dlIssue.DatasetAsColumns.Date)-1].Format(DateFormat)
 	tradeHistory = fmt.Sprintf("first trading day: %s, last trading day: %s\n", fd, ld)
-	logh.Map[appName].Printf(logh.Info, "%s", tradeHistory)
+	lpf(logh.Info, "%s", tradeHistory)
 	for i := 0; i < seriesLen; i++ {
 		if i <= delay-1 {
 			tradeGain[i] = 1
@@ -262,7 +266,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 			if i == seriesLen-1 {
 				textOut = fmt.Sprintf("symbol: %s, date: %s, buyPrice: %8.2f **** TRADE TOMORROW ****",
 					dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), buyPrice)
-				logh.Map[appName].Printf(logh.Info, "%s", textOut)
+				lpf(logh.Info, "%s", textOut)
 				break
 			}
 			buyPrice = dlIssue.DatasetAsColumns.AdjOpen[i+1]
@@ -276,7 +280,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 				gain *= thisGain
 				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f (TRADE STILL OPEN)", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
 				tradeHistory += fmt.Sprintf("%s\n", textOut)
-				logh.Map[appName].Printf(logh.Info, "%s", textOut)
+				lpf(logh.Info, "%s", textOut)
 			}
 		case (trade[i-1] == Buy && trade[i] == Sell):
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
@@ -286,7 +290,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 				gain *= thisGain
 				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f **** TRADE TOMORROW ****", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
 				tradeHistory += fmt.Sprintf("%s\n", textOut)
-				logh.Map[appName].Printf(logh.Info, "%s", textOut)
+				lpf(logh.Info, "%s", textOut)
 				break
 			}
 			tradeGain[i] = tradeGain[i] * dlIssue.DatasetAsColumns.AdjOpen[i+1] / dlIssue.DatasetAsColumns.AdjClose[i]
@@ -294,7 +298,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 			gain *= thisGain
 			textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f", dlIssue.DatasetAsColumns.AdjOpen[i+1], thisGain)
 			tradeHistory += fmt.Sprintf("%s\n", textOut)
-			logh.Map[appName].Printf(logh.Info, "%s", textOut)
+			lpf(logh.Info, "%s", textOut)
 			textOut = ""
 		case trade[i-1] == Sell && trade[i] == Sell:
 			tradeGain[i] = tradeGain[i-1]
@@ -307,11 +311,11 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 	textOut = fmt.Sprintf("symbol: %s, buy/hold gain (annualized): %5.2f (%5.2f)",
 		dlIssue.Symbol, bhGain, AnnualizedGain(bhGain, start, end))
 	tradeHistory += fmt.Sprintf("%s\n", textOut)
-	logh.Map[appName].Printf(logh.Info, textOut)
+	lpf(logh.Info, textOut)
 	textOut = fmt.Sprintf("symbol: %s, total gain (annualized):    %5.2f (%5.2f)\n\n",
 		dlIssue.Symbol, gain, AnnualizedGain(gain, start, end))
 	tradeHistory += fmt.Sprintf("%s\n", textOut)
-	logh.Map[appName].Printf(logh.Info, textOut)
+	lpf(logh.Info, textOut)
 
 	return tradeHistory, gain, tradeGain
 }

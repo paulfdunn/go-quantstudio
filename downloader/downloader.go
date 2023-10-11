@@ -84,6 +84,10 @@ const (
 )
 
 var (
+	appName string
+	lp      func(level logh.LoghLevel, v ...interface{})
+	lpf     func(level logh.LoghLevel, format string, v ...interface{})
+
 	// earliest date for which data is fetched.
 	EarliestDate = time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
 	LatestDate   = time.Now().AddDate(0, 0, 1).Unix()
@@ -92,12 +96,12 @@ var (
 	// LatestDate   = time.Date(2022, time.January, 5, 0, 0, 0, 0, time.UTC).Unix()
 
 	URLCollectionTimeout = time.Duration(10 * time.Second)
-
-	appName string
 )
 
 func Init(appNameInit string) {
 	appName = appNameInit
+	lp = logh.Map[appName].Println
+	lpf = logh.Map[appName].Printf
 }
 
 // NewGroup is a factory for Group.
@@ -130,7 +134,7 @@ func NewGroup(liveData bool, dataFilePath string, name string, symbols []string,
 	if liveData {
 		err := group.SaveCSV(dataFilePath)
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "saving group as csv: %+v", err)
+			lpf(logh.Error, "saving group as csv: %+v", err)
 			return nil, err
 		}
 	}
@@ -158,15 +162,15 @@ func GenerateURLs(symbols []string, url string) (urls []string, urlSymbolMap map
 }
 
 func LoadURLCollectionDataFromFile(dataFilePath string) (urlData []httph.URLCollectionData, err error) {
-	logh.Map[appName].Printf(logh.Warning, "Prior data loaded from file.")
+	lpf(logh.Warning, "Prior data loaded from file.")
 	bIn, err := ioutil.ReadFile(dataFilePath + BinaryExtension)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "reading JSON bodies failed, error:%s", err)
+		lpf(logh.Error, "reading JSON bodies failed, error:%s", err)
 		return nil, err
 	}
 	err = json.Unmarshal(bIn, &urlData)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "unmarshaling JSON data failed, error:%s", err)
+		lpf(logh.Error, "unmarshaling JSON data failed, error:%s", err)
 		return nil, err
 	}
 	return urlData, nil
@@ -179,7 +183,7 @@ func StringRecordToFloat64Record(record []string, skipIndices []int, symbol stri
 			continue
 		}
 		if v == "null" {
-			logh.Map[appName].Printf(logh.Debug, "null value in record, cannot parse to float, symbol: %s, record:%+v", symbol, record)
+			lpf(logh.Debug, "null value in record, cannot parse to float, symbol: %s, record:%+v", symbol, record)
 			nulls++
 			continue
 		}
@@ -187,7 +191,7 @@ func StringRecordToFloat64Record(record []string, skipIndices []int, symbol stri
 		out[i] = goutil.Round(out[i], InputPrecision)
 		if err != nil {
 			err := fmt.Errorf("converting to float, err%v\nsymbol: %s, record:%+v", err, symbol, record)
-			logh.Map[appName].Printf(logh.Error, "%+v", err)
+			lpf(logh.Error, "%+v", err)
 			return nil, nulls, err
 		}
 	}
@@ -211,7 +215,7 @@ func URLCollectionDataDateOrder(records [][]string, urlCollectionDataHeaderIndic
 func (grp Group) SaveCSV(dataFilePath string) error {
 	f, err := os.Create(dataFilePath + CSVExtension)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "opening csn file for output:%+v", err)
+		lpf(logh.Error, "opening csn file for output:%+v", err)
 		return err
 	}
 	defer f.Close()
@@ -221,7 +225,7 @@ func (grp Group) SaveCSV(dataFilePath string) error {
 		header := "symbol,   Date,  Open,  High,  Low,  Close,  Volume,  AdjOpen,  AdjHigh,  AdjLow,  AdjClose,  AdjVolume"
 		_, err := w.WriteString(header + "\n")
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "writing data header:%+v", err)
+			lpf(logh.Error, "writing data header:%+v", err)
 			return err
 		}
 		for _, data := range issue.Dataset {
@@ -230,7 +234,7 @@ func (grp Group) SaveCSV(dataFilePath string) error {
 				data.Open, data.High, data.Low, data.Close, data.Volume,
 				data.AdjOpen, data.AdjHigh, data.AdjLow, data.AdjClose, data.AdjVolume))
 			if err != nil {
-				logh.Map[appName].Printf(logh.Error, "writing data:%+v", err)
+				lpf(logh.Error, "writing data:%+v", err)
 				return err
 			}
 		}
@@ -241,25 +245,25 @@ func (grp Group) SaveCSV(dataFilePath string) error {
 
 func (dt Data) String() string {
 	out, err := json.MarshalIndent(dt, "", "  ")
-	logh.Map[appName].Printf(logh.Error, "calling json.MarshalIndent: %s", err)
+	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
 	return string(goutil.PrettyJSON(out))
 }
 
 func (dac DatasetAsColumns) String() string {
 	out, err := json.MarshalIndent(dac, "", "  ")
-	logh.Map[appName].Printf(logh.Error, "calling json.MarshalIndent: %s", err)
+	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
 	return string(goutil.PrettyJSON(out))
 }
 
 func (grp Group) String() string {
 	out, err := json.MarshalIndent(grp, "", "  ")
-	logh.Map[appName].Printf(logh.Error, "calling json.MarshalIndent: %s", err)
+	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
 	return string(goutil.PrettyJSON(out))
 }
 
 func (iss Issue) String() string {
 	out, err := json.MarshalIndent(iss, "", "  ")
-	logh.Map[appName].Printf(logh.Error, "calling json.MarshalIndent: %s", err)
+	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
 	return string(goutil.PrettyJSON(out))
 }
 
@@ -312,12 +316,12 @@ func saveURLCollectionData(urlData []httph.URLCollectionData, dataFilePath strin
 	//lint:ignore SA1026 request was set to nil in collectGroup to avoid problem
 	bOut, err := json.Marshal(urlData)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "marshalling JSON bodies failed, error:%s", err)
+		lpf(logh.Error, "marshalling JSON bodies failed, error:%s", err)
 		return err
 	}
 	err = ioutil.WriteFile(dataFilePath+BinaryExtension, bOut, 0644)
 	if err != nil {
-		logh.Map[appName].Printf(logh.Error, "writing JSON bodies failed, error:%s", err)
+		lpf(logh.Error, "writing JSON bodies failed, error:%s", err)
 		return err
 	}
 	return nil

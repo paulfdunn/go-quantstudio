@@ -14,6 +14,8 @@ import (
 
 var (
 	appName string
+	lp      func(level logh.LoghLevel, v ...interface{})
+	lpf     func(level logh.LoghLevel, format string, v ...interface{})
 
 	yahooURL = "https://query1.finance.yahoo.com/v7/finance/download/%s?period1=%d&period2=%d&" +
 		"interval=1d&events=history&includeAdjustedClose=true"
@@ -21,6 +23,8 @@ var (
 
 func Init(appNameInit string) {
 	appName = appNameInit
+	lp = logh.Map[appName].Println
+	lpf = logh.Map[appName].Printf
 }
 
 func NewGroup(liveData bool, dataFilePath string, name string, symbols []string) (*dl.Group, error) {
@@ -49,16 +53,16 @@ func mapURLCollectionDataHeaderIndices(urlCollectionDataCSVHeader []string) (url
 			urlCollectionDataHeaderIndicesMap["AdjClose"] = i
 		default:
 			wasDefault = true
-			logh.Map[appName].Printf(logh.Warning, "No urlCollectionDataHeaderIndicesMap entry created for %d, %s", i, v)
+			lpf(logh.Warning, "No urlCollectionDataHeaderIndicesMap entry created for %d, %s", i, v)
 		}
 
 		if !wasDefault {
-			logh.Map[appName].Printf(logh.Debug, "urlCollectionDataHeaderIndicesMap entry created for %d, %s", i, v)
+			lpf(logh.Debug, "urlCollectionDataHeaderIndicesMap entry created for %d, %s", i, v)
 		}
 	}
 
 	if _, ok := urlCollectionDataHeaderIndicesMap["Date"]; !ok {
-		logh.Map[appName].Printf(logh.Error, "no Date field in data, records[0]:%+v", urlCollectionDataCSVHeader)
+		lpf(logh.Error, "no Date field in data, records[0]:%+v", urlCollectionDataCSVHeader)
 		return nil, err
 	}
 
@@ -72,23 +76,23 @@ func urlCollectionDataToGroup(urlData []httph.URLCollectionData, urlSymbolMap ma
 	for _, ucd := range urlData {
 		symbol, ok := urlSymbolMap[dl.BaseURL(ucd.URL)]
 		if !ok {
-			logh.Map[appName].Printf(logh.Error, "the URL is not in map, URL: %s", dl.BaseURL(ucd.URL))
+			lpf(logh.Error, "the URL is not in map, URL: %s", dl.BaseURL(ucd.URL))
 		}
 
 		r := csv.NewReader(strings.NewReader(string(ucd.Bytes)))
 		records, err := r.ReadAll()
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "reading Byte(s) from input failed, error:%s", err)
+			lpf(logh.Error, "reading Byte(s) from input failed, error:%s", err)
 			return nil, err
 		}
 		if len(records) == 0 {
-			logh.Map[appName].Printf(logh.Error, "zero length data, symbol:%5s, body:%s", symbol, string(ucd.Bytes))
+			lpf(logh.Error, "zero length data, symbol:%5s, body:%s", symbol, string(ucd.Bytes))
 			return nil, errors.New("zero length data")
 		}
 
 		urlCollectionDataHeaderIndicesMap, err := mapURLCollectionDataHeaderIndices(records[0])
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "could not get column indices from raw data, error:%s", err)
+			lpf(logh.Error, "could not get column indices from raw data, error:%s", err)
 			return nil, err
 		}
 
@@ -99,7 +103,7 @@ func urlCollectionDataToGroup(urlData []httph.URLCollectionData, urlSymbolMap ma
 		issue.DatasetAsColumns = issue.ToDatasetAsColumns()
 		group.Issues = append(group.Issues, issue)
 
-		logh.Map[appName].Printf(logh.Info, "Issue loaded; symbol:%5s, StartDate:%s, EndDate:%s, data points:%d",
+		lpf(logh.Info, "Issue loaded; symbol:%5s, StartDate:%s, EndDate:%s, data points:%d",
 			issue.Symbol, dateFirst.Format(dl.DateFormat), dateLast.Format(dl.DateFormat), len(data))
 	}
 
@@ -126,14 +130,14 @@ func urlCollectionDataToStructure(symbol string, records [][]string, urlCollecti
 
 		date, err := time.Parse(dl.DateFormat, record[urlCollectionDataHeaderIndicesMap["Date"]])
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "cannot parse date:%v", record[urlCollectionDataHeaderIndicesMap["Date"]])
+			lpf(logh.Error, "cannot parse date:%v", record[urlCollectionDataHeaderIndicesMap["Date"]])
 			continue
 		}
 
 		floatRecord, nulls, err := dl.StringRecordToFloat64Record(record, []int{urlCollectionDataHeaderIndicesMap["Date"]}, symbol)
 		cummulativeNulls += nulls
 		if err != nil {
-			logh.Map[appName].Printf(logh.Error, "cannot parse record to float, symbol: %s, record:%+v", symbol, record)
+			lpf(logh.Error, "cannot parse record to float, symbol: %s, record:%+v", symbol, record)
 			continue
 		}
 		adj := floatRecord[urlCollectionDataHeaderIndicesMap["AdjClose"]] / floatRecord[urlCollectionDataHeaderIndicesMap["Close"]]
@@ -142,7 +146,7 @@ func urlCollectionDataToStructure(symbol string, records [][]string, urlCollecti
 			if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
 				continue
 			}
-			logh.Map[appName].Printf(logh.Warning, "adj is NaN (Close was 0) on weekday (may be holiday), symbol: %s, date: %s", symbol, date)
+			lpf(logh.Warning, "adj is NaN (Close was 0) on weekday (may be holiday), symbol: %s, date: %s", symbol, date)
 			continue
 		}
 
@@ -161,7 +165,7 @@ func urlCollectionDataToStructure(symbol string, records [][]string, urlCollecti
 	}
 
 	if cummulativeNulls > 0 {
-		logh.Map[appName].Printf(logh.Warning, "symbol: %s, total null values in records: %d", symbol, cummulativeNulls)
+		lpf(logh.Warning, "symbol: %s, total null values in records: %d", symbol, cummulativeNulls)
 	}
 
 	return data
