@@ -154,7 +154,10 @@ func main() {
 }
 
 func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []string, dlGroupChan chan *downloader.Group) error {
-	allSymbols := append(tradingSymbols, strings.Split(defs.AnalysisSymbols, ",")...)
+	allSymbols := tradingSymbols
+	if defs.AnalysisSymbols != "" {
+		allSymbols = append(allSymbols, strings.Split(defs.AnalysisSymbols, ",")...)
+	}
 	lpf(logh.Info, "Downloading these symbols: %+v", allSymbols)
 	group, err := financeYahoo.NewGroup(liveData, dataFilepath, *groupNamePtr, allSymbols)
 	lp(logh.Info, "Downloading complete")

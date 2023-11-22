@@ -14,7 +14,8 @@ const (
 	//
 	// ^fvx Treasury Yield 5 Years
 	// ^tnx Treasury Yield 10 Years
-	AnalysisSymbols = "^fvx,^tnx"
+	// AnalysisSymbols = "^fvx,^tnx"
+	AnalysisSymbols = ""
 	//
 	// Symbols for trading
 	//
