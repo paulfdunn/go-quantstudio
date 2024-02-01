@@ -50,7 +50,7 @@ func Init() {
 	}
 
 	// CLI flags
-	logFilePtr = flag.String("logfile", "", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
+	logFilePtr = flag.String("logfile", "automator.log", "Name of log file in "+dataDirectory+"; blank to print logs to terminal.")
 	logLevel = flag.Int("loglevel", int(logh.Info), fmt.Sprintf("Logging level; default %d. Zero based index into: %v",
 		int(logh.Info), logh.DefaultLevels))
 	flag.Parse()
@@ -62,6 +62,8 @@ func Init() {
 	logh.New(appName, logFilepath, logh.DefaultLevels, logh.LoghLevel(*logLevel),
 		logh.DefaultFlags, 100, int64(10e6))
 
+	lp = logh.Map[appName].Println
+	lpf = logh.Map[appName].Printf
 	lpf(logh.Debug, "user.Current(): %+v", usr)
 }
 
@@ -69,8 +71,6 @@ func main() {
 	defer crashDetect()
 
 	Init()
-	lp = logh.Map[appName].Println
-	lpf = logh.Map[appName].Printf
 
 	// Get the symbols that are loaded in go-quantstudio, then get screen shots for all symbols
 	screenShotUrl := fmt.Sprintf("http://%s/", "localhost:8080")
