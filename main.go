@@ -84,8 +84,10 @@ func Init() {
 	}
 	logh.New(appName, logFilepath, logh.DefaultLevels, logh.LoghLevel(*logLevel),
 		logh.DefaultFlags, 100, int64(10e6))
-	logh.Map[appName].Println(logh.Debug, "user.Current(): %+v", usr)
-	logh.Map[appName].Printf(logh.Info, "Data and logs being saved to directory: %s", dataDirectory)
+	lp = logh.Map[appName].Println
+	lpf = logh.Map[appName].Printf
+	lp(logh.Debug, "user.Current(): %+v", usr)
+	lpf(logh.Info, "Data and logs being saved to directory: %s", dataDirectory)
 
 	downloader.Init(appName)
 	financeYahoo.Init(appName)
@@ -99,8 +101,6 @@ func main() {
 	defer crashDetect()
 
 	Init()
-	lp = logh.Map[appName].Println
-	lpf = logh.Map[appName].Printf
 
 	dataFilepath := filepath.Join(dataDirectory, *groupNamePtr)
 	tradingSymbols := strings.Split(*symbolCSVList, ",")
