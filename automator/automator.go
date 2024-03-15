@@ -80,7 +80,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	getChromedpScreenShotsForAllSymbols(screenShotUrl, dataDirectory, symbols, 100)
+	getChromedpScreenShotsForAllSymbols(screenShotUrl, symbols, 100)
 }
 
 func clickDownloadData(screenShotUrl string) {
@@ -125,7 +125,7 @@ func crashDetect() {
 	}
 }
 
-func getChromedpScreenShotsForAllSymbols(screenShotUrl string, dataDirectory string, symbols []string, quality int) {
+func getChromedpScreenShotsForAllSymbols(screenShotUrl string, symbols []string, quality int) {
 	lpf(logh.Info, "Making request for screenshot using %s", screenShotUrl)
 
 	for {
