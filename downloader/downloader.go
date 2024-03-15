@@ -4,16 +4,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/paulfdunn/goutil"
-	"github.com/paulfdunn/httph"
-	"github.com/paulfdunn/logh"
+	"github.com/paulfdunn/go-helper/encodingh/jsonh"
+	"github.com/paulfdunn/go-helper/logh"
+	"github.com/paulfdunn/go-helper/mathh"
+	"github.com/paulfdunn/go-helper/neth/httph"
 )
 
 type Downloader interface {
@@ -85,8 +86,8 @@ const (
 
 var (
 	appName string
-	lp      func(level logh.LoghLevel, v ...interface{})
-	lpf     func(level logh.LoghLevel, format string, v ...interface{})
+	// lp      func(level logh.LoghLevel, v ...interface{})
+	lpf func(level logh.LoghLevel, format string, v ...interface{})
 
 	// earliest date for which data is fetched.
 	EarliestDate = time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
@@ -100,7 +101,7 @@ var (
 
 func Init(appNameInit string) {
 	appName = appNameInit
-	lp = logh.Map[appName].Println
+	// lp = logh.Map[appName].Println
 	lpf = logh.Map[appName].Printf
 }
 
@@ -163,7 +164,7 @@ func GenerateURLs(symbols []string, url string) (urls []string, urlSymbolMap map
 
 func LoadURLCollectionDataFromFile(dataFilePath string) (urlData []httph.URLCollectionData, err error) {
 	lpf(logh.Warning, "Prior data loaded from file.")
-	bIn, err := ioutil.ReadFile(dataFilePath + BinaryExtension)
+	bIn, err := os.ReadFile(dataFilePath + BinaryExtension)
 	if err != nil {
 		lpf(logh.Error, "reading JSON bodies failed, error:%s", err)
 		return nil, err
@@ -179,7 +180,7 @@ func LoadURLCollectionDataFromFile(dataFilePath string) (urlData []httph.URLColl
 func StringRecordToFloat64Record(record []string, skipIndices []int, symbol string) (out []float64, nulls int, err error) {
 	out = make([]float64, len(record))
 	for i, v := range record {
-		if goutil.InIntSlice(i, skipIndices) {
+		if slices.Contains(skipIndices, i) {
 			continue
 		}
 		if v == "null" {
@@ -188,7 +189,7 @@ func StringRecordToFloat64Record(record []string, skipIndices []int, symbol stri
 			continue
 		}
 		out[i], err = strconv.ParseFloat(v, 64)
-		out[i] = goutil.Round(out[i], InputPrecision)
+		out[i] = mathh.Round(out[i], InputPrecision)
 		if err != nil {
 			err := fmt.Errorf("converting to float, err%v\nsymbol: %s, record:%+v", err, symbol, record)
 			lpf(logh.Error, "%+v", err)
@@ -246,25 +247,25 @@ func (grp Group) SaveCSV(dataFilePath string) error {
 func (dt Data) String() string {
 	out, err := json.MarshalIndent(dt, "", "  ")
 	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
-	return string(goutil.PrettyJSON(out))
+	return string(jsonh.PrettyJSON(out))
 }
 
 func (dac DatasetAsColumns) String() string {
 	out, err := json.MarshalIndent(dac, "", "  ")
 	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
-	return string(goutil.PrettyJSON(out))
+	return string(jsonh.PrettyJSON(out))
 }
 
 func (grp Group) String() string {
 	out, err := json.MarshalIndent(grp, "", "  ")
 	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
-	return string(goutil.PrettyJSON(out))
+	return string(jsonh.PrettyJSON(out))
 }
 
 func (iss Issue) String() string {
 	out, err := json.MarshalIndent(iss, "", "  ")
 	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
-	return string(goutil.PrettyJSON(out))
+	return string(jsonh.PrettyJSON(out))
 }
 
 // ToDatasetAsColumns converts an issue from a row format to column format
@@ -319,7 +320,7 @@ func saveURLCollectionData(urlData []httph.URLCollectionData, dataFilePath strin
 		lpf(logh.Error, "marshalling JSON bodies failed, error:%s", err)
 		return err
 	}
-	err = ioutil.WriteFile(dataFilePath+BinaryExtension, bOut, 0644)
+	err = os.WriteFile(dataFilePath+BinaryExtension, bOut, 0644)
 	if err != nil {
 		lpf(logh.Error, "writing JSON bodies failed, error:%s", err)
 		return err

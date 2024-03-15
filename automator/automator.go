@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/chromedp/chromedp"
+	"github.com/paulfdunn/go-helper/logh"
 	"github.com/paulfdunn/go-quantstudio/defs"
-	"github.com/paulfdunn/logh"
 )
 
 const (

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/paulfdunn/go-helper/logh"
+	"github.com/paulfdunn/go-helper/neth/httph"
 	dl "github.com/paulfdunn/go-quantstudio/downloader"
-	"github.com/paulfdunn/httph"
-	"github.com/paulfdunn/logh"
 )
 
 var (

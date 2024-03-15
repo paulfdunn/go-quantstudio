@@ -1,6 +1,8 @@
-github.com/paulfdunn/goutil v1.0.1 h1:Nj74V2yVdYp5a6qrzYzcgBn1PjRqq7yV/GJCenT6/sI=
-github.com/paulfdunn/goutil v1.0.1/go.mod h1:bkQDv9kiAAqV5Ok1EolNUiC3vdjndtM4patIwal+dNw=
-github.com/paulfdunn/httph v1.0.1 h1:fvSzPoRTAxvV70nmK84tXQJm2Q4XxMrSrEqgR6HfxF0=
-github.com/paulfdunn/httph v1.0.1/go.mod h1:EjEgZwjlwzHrmWYrDcphM5S+sjI3GCeVbF/GDBJNjIA=
-github.com/paulfdunn/logh v1.0.0 h1:e18++q3hFn8oe/1XlSWCHOYKYEligF/ErblkkzFeet4=
-github.com/paulfdunn/logh v1.0.0/go.mod h1:ssWlcOLLlVWXG4AY+1oB/0MOVdahgfVibvia7s6uwzc=
+github.com/paulfdunn/go-helper/encodingh v1.0.1 h1:Ch8foBhRsbDGYXJqkTqWCUX3piwWdWVxpFPXTda8eF0=
+github.com/paulfdunn/go-helper/encodingh v1.0.1/go.mod h1:C/kmxwZfu6fMpYrkVUobPseEkivMGtysv6Mex3sjNCo=
+github.com/paulfdunn/go-helper/logh v1.0.1 h1:/o3T/5ku+cnZZ5TnBRHq2RhAoa4EgShFCXAVnJ1+Dg4=
+github.com/paulfdunn/go-helper/logh v1.0.1/go.mod h1:PFr7lZL62H/g6c+3Ym7QJ2dIS8G7Awx+IhmqY1YQg+Q=
+github.com/paulfdunn/go-helper/mathh v1.0.1 h1:fKg+9264oAZXtOdBtLyYWRcr6O64l+sUrm35KNCRoYA=
+github.com/paulfdunn/go-helper/mathh v1.0.1/go.mod h1:Uf3+gxz2UJG4OFhQusX2RC5nKKYsUxcFj8qyY4/HGjc=
+github.com/paulfdunn/go-helper/neth v1.0.1 h1:NxI1EkjAr/EMiSog8DO7OfHbj0AC3/fOl8p5EcMY6t8=
+github.com/paulfdunn/go-helper/neth v1.0.1/go.mod h1:apZ3PUXO6rQ0jrO6bp6V7tyqZiH+MZUfM21ucygqI2c=

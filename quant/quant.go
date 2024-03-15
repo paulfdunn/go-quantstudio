@@ -5,8 +5,8 @@ import (
 	"math"
 	"time"
 
+	"github.com/paulfdunn/go-helper/logh"
 	"github.com/paulfdunn/go-quantstudio/downloader"
-	"github.com/paulfdunn/logh"
 )
 
 type Results struct {

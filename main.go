@@ -15,12 +15,12 @@ import (
 	"runtime/debug"
 	"strings"
 
+	"github.com/paulfdunn/go-helper/logh"
 	"github.com/paulfdunn/go-quantstudio/defs"
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/downloader/financeYahoo"
 	"github.com/paulfdunn/go-quantstudio/quant"
 	"github.com/paulfdunn/go-quantstudio/quant/quantMA"
-	"github.com/paulfdunn/logh"
 )
 
 var (

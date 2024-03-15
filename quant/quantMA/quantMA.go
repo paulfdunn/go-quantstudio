@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/paulfdunn/go-helper/encodingh/jsonh"
+	"github.com/paulfdunn/go-helper/logh"
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/quant"
-	"github.com/paulfdunn/goutil"
-	"github.com/paulfdunn/logh"
 )
 
 type Group struct {
@@ -54,7 +55,7 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 
 	for index := range downloaderGroup.Issues {
 		// Skip non-trading symbols.
-		if !goutil.InStringSlice(downloaderGroup.Issues[index].Symbol, tradingSymbols) {
+		if !slices.Contains(tradingSymbols, downloaderGroup.Issues[index].Symbol) {
 			continue
 		}
 		// Dont use the looping variable in a "i,v" style for loop as
@@ -69,13 +70,13 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 func (grp Group) String() string {
 	out, err := json.MarshalIndent(grp, "", "  ")
 	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
-	return string(goutil.PrettyJSON(out))
+	return string(jsonh.PrettyJSON(out))
 }
 
 func (iss Issue) String() string {
 	out, err := json.MarshalIndent(iss, "", "  ")
 	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
-	return string(goutil.PrettyJSON(out))
+	return string(jsonh.PrettyJSON(out))
 }
 
 func (grp *Group) UpdateIssue(index int, maLength int, maSplit float64) {
@@ -135,7 +136,7 @@ func WrappedPlotlyHandlerMA(dlGroupChan chan *downloader.Group, tradingSymbols [
 		default:
 			lp(logh.Debug, "using previously retrieved qGroup")
 		}
-		if !goutil.InStringSlice(urlSymbol, tradingSymbols) {
+		if !slices.Contains(tradingSymbols, urlSymbol) {
 			lpf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", urlSymbol)
 			w.WriteHeader(http.StatusNotFound)
 			return

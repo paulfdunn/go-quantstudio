@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/paulfdunn/go-helper/mathh"
 	"github.com/paulfdunn/go-quantstudio/downloader"
-	"github.com/paulfdunn/goutil"
 )
 
 func Example_AnnualizeGain() {
@@ -53,7 +53,7 @@ func Example_MultiplySlice() {
 	f1 := []float64{1.0, 2.0, 3.0}
 	result := MultiplySlice(1.1, f1)
 	for i := range result {
-		result[i] = goutil.Round(result[i], 4)
+		result[i] = mathh.Round(result[i], 4)
 	}
 	fmt.Printf("%+v\n", result)
 
