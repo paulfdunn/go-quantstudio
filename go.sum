@@ -1,8 +1,8 @@
-github.com/paulfdunn/go-helper/encodingh v1.0.1 h1:Ch8foBhRsbDGYXJqkTqWCUX3piwWdWVxpFPXTda8eF0=
-github.com/paulfdunn/go-helper/encodingh v1.0.1/go.mod h1:C/kmxwZfu6fMpYrkVUobPseEkivMGtysv6Mex3sjNCo=
-github.com/paulfdunn/go-helper/logh v1.0.1 h1:/o3T/5ku+cnZZ5TnBRHq2RhAoa4EgShFCXAVnJ1+Dg4=
-github.com/paulfdunn/go-helper/logh v1.0.1/go.mod h1:PFr7lZL62H/g6c+3Ym7QJ2dIS8G7Awx+IhmqY1YQg+Q=
-github.com/paulfdunn/go-helper/mathh v1.0.1 h1:fKg+9264oAZXtOdBtLyYWRcr6O64l+sUrm35KNCRoYA=
-github.com/paulfdunn/go-helper/mathh v1.0.1/go.mod h1:Uf3+gxz2UJG4OFhQusX2RC5nKKYsUxcFj8qyY4/HGjc=
-github.com/paulfdunn/go-helper/neth v1.0.1 h1:NxI1EkjAr/EMiSog8DO7OfHbj0AC3/fOl8p5EcMY6t8=
-github.com/paulfdunn/go-helper/neth v1.0.1/go.mod h1:apZ3PUXO6rQ0jrO6bp6V7tyqZiH+MZUfM21ucygqI2c=
+github.com/paulfdunn/go-helper/encodingh v1.0.5 h1:jsE+bl8TRhf8VlTi90hRQw/4WK8SebBIvBoSOfJFmSY=
+github.com/paulfdunn/go-helper/encodingh v1.0.5/go.mod h1:C/kmxwZfu6fMpYrkVUobPseEkivMGtysv6Mex3sjNCo=
+github.com/paulfdunn/go-helper/logh v1.0.5 h1:Vzp82xgy7330a80BLgRzU+KzP4X8MBhHTjjEWn1lBPo=
+github.com/paulfdunn/go-helper/logh v1.0.5/go.mod h1:PFr7lZL62H/g6c+3Ym7QJ2dIS8G7Awx+IhmqY1YQg+Q=
+github.com/paulfdunn/go-helper/mathh v1.0.5 h1:wf2tI2kOO+8r+EmdykiW/a/5XWXKCK7mCBhR8uVZGpM=
+github.com/paulfdunn/go-helper/mathh v1.0.5/go.mod h1:Uf3+gxz2UJG4OFhQusX2RC5nKKYsUxcFj8qyY4/HGjc=
+github.com/paulfdunn/go-helper/neth v1.0.5 h1:E+DAvObockKsQWSgPndklVNDolKjwX/4hej3AbJ6yGY=
+github.com/paulfdunn/go-helper/neth v1.0.5/go.mod h1:tLb/aP2P81HdNFzIRa1Dx1J9uMGplcIIql3S0ov2L3A=
