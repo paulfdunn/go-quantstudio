@@ -20,6 +20,8 @@ github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde h1:x0TT0RDC7UhA
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
 github.com/paulfdunn/go-helper/logh v1.0.0 h1:uqhiykqTiyiql7upV4+jBdOxs/VEi6qd4fhS/8Odp5I=
 github.com/paulfdunn/go-helper/logh v1.0.0/go.mod h1:PFr7lZL62H/g6c+3Ym7QJ2dIS8G7Awx+IhmqY1YQg+Q=
+github.com/paulfdunn/go-helper/logh v1.3.4 h1:+JRobjY4IcIfZFWROkKUehg5btIv7orUDcwYDG2gSE8=
+github.com/paulfdunn/go-helper/logh v1.3.4/go.mod h1:kQ9ecllPxtj+ipymHiRZ1aKRQCjSQn/eoQlwy1hK4qQ=
 github.com/paulfdunn/go-quantstudio v0.0.0-20240315195818-9a2a26633a11 h1:ZWebh5Ai5CfF9obHTv3pTCTTfejv2B3Cumgs5lBiljA=
 github.com/paulfdunn/go-quantstudio v0.0.0-20240315195818-9a2a26633a11/go.mod h1:4zmhuKaKWbDVqmBtdGthSuRWrEZOYXlXdROtiymwiPQ=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

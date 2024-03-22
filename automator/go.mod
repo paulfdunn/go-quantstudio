@@ -1,10 +1,10 @@
 module github.com/paulfdunn/go-quantstudio/automator
 
-go 1.21.7
+go 1.21.8
 
 require (
 	github.com/chromedp/chromedp v0.9.5
-	github.com/paulfdunn/go-helper/logh v1.0.0
+	github.com/paulfdunn/go-helper/logh v1.3.4
 	github.com/paulfdunn/go-quantstudio v0.0.0-20240315195818-9a2a26633a11
 )
 
