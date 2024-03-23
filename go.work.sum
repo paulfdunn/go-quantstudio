@@ -1,4 +1,5 @@
 github.com/paulfdunn/go-helper/osh v1.3.4 h1:tDvu9q7cl+GBZXmhO5FEq+zXwg0vgnfl5uKb8QiDcLk=
+github.com/paulfdunn/go-helper/osh v1.3.7 h1:lKfKpUVtfgC6Ip6O1WHjl13+ZPDYJHJNoTYGc291UrA=
 github.com/paulfdunn/goutil v1.0.1/go.mod h1:bkQDv9kiAAqV5Ok1EolNUiC3vdjndtM4patIwal+dNw=
 github.com/paulfdunn/httph v1.0.1/go.mod h1:EjEgZwjlwzHrmWYrDcphM5S+sjI3GCeVbF/GDBJNjIA=
 github.com/paulfdunn/logh v1.0.0/go.mod h1:ssWlcOLLlVWXG4AY+1oB/0MOVdahgfVibvia7s6uwzc=

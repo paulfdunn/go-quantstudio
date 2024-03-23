@@ -18,10 +18,16 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde h1:x0TT0RDC7UhAVbbWWBzr41ElhJx5tXPWkIHA2HWPRuw=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
+github.com/paulfdunn/go-helper/encodingh v1.3.7 h1:TZZ/49FrO4N3zNuQ7/gE3EtCLM6oSaW8jtFtEKa8b4w=
+github.com/paulfdunn/go-helper/encodingh v1.3.7/go.mod h1:u7urJNl7ZOuetqWlkuIonbr4tGxOzzsO0BS7hLEbbRw=
 github.com/paulfdunn/go-helper/logh v1.0.0 h1:uqhiykqTiyiql7upV4+jBdOxs/VEi6qd4fhS/8Odp5I=
 github.com/paulfdunn/go-helper/logh v1.0.0/go.mod h1:PFr7lZL62H/g6c+3Ym7QJ2dIS8G7Awx+IhmqY1YQg+Q=
 github.com/paulfdunn/go-helper/logh v1.3.4 h1:+JRobjY4IcIfZFWROkKUehg5btIv7orUDcwYDG2gSE8=
 github.com/paulfdunn/go-helper/logh v1.3.4/go.mod h1:kQ9ecllPxtj+ipymHiRZ1aKRQCjSQn/eoQlwy1hK4qQ=
+github.com/paulfdunn/go-helper/logh v1.3.7 h1:Zp45aTmVLn4047TDR3Q3xKeKZjA9GqdsWVLLdROtYqQ=
+github.com/paulfdunn/go-helper/logh v1.3.7/go.mod h1:kQ9ecllPxtj+ipymHiRZ1aKRQCjSQn/eoQlwy1hK4qQ=
+github.com/paulfdunn/go-helper/mathh v1.3.7 h1:f5xPpwChejBdqR+xFM49E39VPUNegQEz7+o86gnLfHA=
+github.com/paulfdunn/go-helper/mathh v1.3.7/go.mod h1:cpasPJjM0Ijqs7paiBSB4gHnYmglGF7kci3bTxYRYXg=
 github.com/paulfdunn/go-quantstudio v0.0.0-20240315195818-9a2a26633a11 h1:ZWebh5Ai5CfF9obHTv3pTCTTfejv2B3Cumgs5lBiljA=
 github.com/paulfdunn/go-quantstudio v0.0.0-20240315195818-9a2a26633a11/go.mod h1:4zmhuKaKWbDVqmBtdGthSuRWrEZOYXlXdROtiymwiPQ=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
