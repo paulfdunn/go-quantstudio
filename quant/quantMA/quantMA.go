@@ -48,6 +48,18 @@ func Init(appNameInit string) {
 	lpf = logh.Map[appName].Printf
 }
 
+func (grp Group) String() string {
+	out, err := json.MarshalIndent(grp, "", "  ")
+	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
+	return string(jsonh.PrettyJSON(out))
+}
+
+func (iss Issue) String() string {
+	out, err := json.MarshalIndent(iss, "", "  ")
+	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
+	return string(jsonh.PrettyJSON(out))
+}
+
 func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLength int, maSplit float64) *Group {
 	lpf(logh.Info, "calling quant.Run with maLength: %d, maSplit: %5.2f", maLength, maSplit)
 	group := Group{Name: downloaderGroup.Name}
@@ -61,26 +73,13 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 		// Dont use the looping variable in a "i,v" style for loop as
 		// the variable is pointing to a pointer
 		group.Issues[index] = Issue{DownloaderIssue: &downloaderGroup.Issues[index]}
-		group.UpdateIssue(index, maLength, maSplit)
+		group.Issues[index] = UpdateIssue(group.Issues[index].DownloaderIssue, maLength, maSplit)
 	}
 
 	return &group
 }
 
-func (grp Group) String() string {
-	out, err := json.MarshalIndent(grp, "", "  ")
-	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
-	return string(jsonh.PrettyJSON(out))
-}
-
-func (iss Issue) String() string {
-	out, err := json.MarshalIndent(iss, "", "  ")
-	lpf(logh.Error, "calling json.MarshalIndent: %s", err)
-	return string(jsonh.PrettyJSON(out))
-}
-
-func (grp *Group) UpdateIssue(index int, maLength int, maSplit float64) {
-	iss := grp.Issues[index].DownloaderIssue
+func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	issDAC := iss.DatasetAsColumns
 	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjClose)
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjHigh)
@@ -95,7 +94,7 @@ func (grp *Group) UpdateIssue(index int, maLength int, maSplit float64) {
 	annualizedGain := quant.AnnualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
 	results := quant.Results{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
 		TradeMA: tradeMA, TradeGainVsTime: tradeGainVsTime}
-	grp.Issues[index] = Issue{DownloaderIssue: iss,
+	return Issue{DownloaderIssue: iss,
 		QuantsetAsColumns: QuantMA{PriceNormalizedClose: priceNormalizedClose,
 			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,
@@ -104,16 +103,13 @@ func (grp *Group) UpdateIssue(index int, maLength int, maSplit float64) {
 }
 
 func WrappedPlotlyHandlerMA(dlGroupChan chan *downloader.Group, tradingSymbols []string) http.HandlerFunc {
-	// Use a closure to persist the state of these variables between calls.
-	// The first call to this function must always have data in dlGroupChan, and that results
-	// in a call to GetGroup to process all issues. Subsequent calls will use the already
-	// downloaded data and only process the single issue and parameters specified in the call.
-	// If the user presses the Download button, new data IS downloaded and put in dlGroupChan,
-	// and that data processed.
-	// This complexity allows fast processing without downloading data every call, but also allows
-	// background downloading of (fresh) data and subsequent analysis.
+	// Use a closure to persist the state of these variables between calls. The first call to this
+	// function must always have data in dlGroupChan. Subsequent calls will use the already
+	// downloaded data and only process the single issue and parameters specified in the call. If
+	// the user presses the Download button, new data IS downloaded and put in dlGroupChan, and that
+	// data processed. This complexity allows fast processing without downloading data every call,
+	// but also allows background downloading of (fresh) data and subsequent analysis.
 	var dlGroup *downloader.Group
-	var qGroup *Group
 	var trdSymbols = tradingSymbols
 	return func(w http.ResponseWriter, r *http.Request) {
 		urlSymbol := r.URL.Query().Get("symbol")
@@ -132,11 +128,10 @@ func WrappedPlotlyHandlerMA(dlGroupChan chan *downloader.Group, tradingSymbols [
 
 		select {
 		case dlGroup = <-dlGroupChan:
-			qGroup = GetGroup(dlGroup, trdSymbols, maLength, maSplit)
 		default:
-			lp(logh.Debug, "using previously retrieved qGroup")
+			lp(logh.Debug, "using previously downloaded data")
 		}
-		if !slices.Contains(tradingSymbols, urlSymbol) {
+		if !slices.Contains(trdSymbols, urlSymbol) {
 			lpf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", urlSymbol)
 			w.WriteHeader(http.StatusNotFound)
 			return
@@ -153,9 +148,9 @@ func WrappedPlotlyHandlerMA(dlGroupChan chan *downloader.Group, tradingSymbols [
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		qGroup.UpdateIssue(symbolIndex, maLength, maSplit)
-		if err := plotlyJSON(qGroup.Issues[symbolIndex], w); err != nil {
-			lpf(logh.Error, "issue: %s\n%+v", err, qGroup.Issues[symbolIndex])
+		iss := UpdateIssue(&dlGroup.Issues[symbolIndex], maLength, maSplit)
+		if err := plotlyJSON(iss, w); err != nil {
+			lpf(logh.Error, "issue: %s\n%+v", err, iss)
 		}
 	}
 }

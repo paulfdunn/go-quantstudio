@@ -8,6 +8,10 @@ import (
 	"github.com/paulfdunn/go-quantstudio/downloader"
 )
 
+func init() {
+	Init("test")
+}
+
 func Example_AnnualizeGain() {
 	totalGain := 1.1
 	start := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)

@@ -17,6 +17,8 @@ var (
 )
 
 func init() {
+	Init("test")
+	dl.Init("test")
 	// For testing, override latestDate so it is a fixed value. Otherwise
 	// it changes every day and the tests fail.
 	dl.LatestDate = time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
