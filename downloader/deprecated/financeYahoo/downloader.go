@@ -1,3 +1,6 @@
+// Package financeYahoo implements a price downloader using the finance.yahoo API.
+// As of SEP-6-2024 that API requires a fee to use, and this code is deprecated.
+// See package financeYahooChart for the replacement.
 package financeYahoo
 
 import (
@@ -14,8 +17,8 @@ import (
 
 var (
 	appName string
-	lp      func(level logh.LoghLevel, v ...interface{})
-	lpf     func(level logh.LoghLevel, format string, v ...interface{})
+	// lp      func(level logh.LoghLevel, v ...interface{})
+	lpf func(level logh.LoghLevel, format string, v ...interface{})
 
 	yahooURL = "https://query1.finance.yahoo.com/v7/finance/download/%s?period1=%d&period2=%d&" +
 		"interval=1d&events=history&includeAdjustedClose=true"
@@ -23,7 +26,7 @@ var (
 
 func Init(appNameInit string) {
 	appName = appNameInit
-	lp = logh.Map[appName].Println
+	// lp = logh.Map[appName].Println
 	lpf = logh.Map[appName].Printf
 }
 
@@ -79,10 +82,11 @@ func urlCollectionDataToGroup(urlData []httph.URLCollectionData, urlSymbolMap ma
 			lpf(logh.Error, "the URL is not in map, URL: %s", dl.BaseURL(ucd.URL))
 		}
 
+		lpf(logh.Info, "%s", string(ucd.Bytes))
 		r := csv.NewReader(strings.NewReader(string(ucd.Bytes)))
 		records, err := r.ReadAll()
 		if err != nil {
-			lpf(logh.Error, "reading Byte(s) from input failed, error:%s", err)
+			lpf(logh.Error, "reading Byte(s) from input failed, symbol: %s, error:%s", symbol, err)
 			return nil, err
 		}
 		if len(records) == 0 {

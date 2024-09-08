@@ -1,5 +1,6 @@
 #!/bin/zsh
 # Build and push container to Artifact Registry
+colima start
 export GCLOUD_PROJECT="go-quantstudio-new-430921"
 export REPO="go-quantstudio-new-repo"
 export REGION="us-west3"

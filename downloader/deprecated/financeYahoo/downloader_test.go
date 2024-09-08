@@ -21,7 +21,8 @@ func init() {
 	dl.Init("test")
 	// For testing, override latestDate so it is a fixed value. Otherwise
 	// it changes every day and the tests fail.
-	dl.LatestDate = time.Date(2023, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
+	dl.EarliestDate = time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
+	dl.LatestDate = time.Date(2022, time.January, 5, 0, 0, 0, 0, time.UTC).Unix()
 }
 
 func ExampleNewGroup() {

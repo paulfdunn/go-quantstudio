@@ -78,7 +78,7 @@ const (
 	// Floats are rounded to this number of decimal points. Yahoo will slightly alter some values
 	// with each call, but only at very high numbers of decimal places. That makes debugging
 	// difficult.
-	InputPrecision = 4
+	InputPrecision = 2
 
 	// err on the side of caution; if yahoo sees to much traffic from the same user, it may block.
 	Threads = 1
@@ -92,9 +92,6 @@ var (
 	// earliest date for which data is fetched.
 	EarliestDate = time.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
 	LatestDate   = time.Now().AddDate(0, 0, 1).Unix()
-	// Used to generate test data
-	// EarliestDate = time.Date(2022, time.January, 1, 0, 0, 0, 0, time.UTC).Unix()
-	// LatestDate   = time.Date(2022, time.January, 5, 0, 0, 0, 0, time.UTC).Unix()
 
 	URLCollectionTimeout = time.Duration(10 * time.Second)
 )
@@ -110,7 +107,7 @@ func Init(appNameInit string) {
 // from the prior call.
 func NewGroup(liveData bool, dataFilePath string, name string, symbols []string, url string,
 	callbackURLCollectionDataToGroup URLCollectionDataToGroup) (*Group, error) {
-	updateLatestDate()
+	// updateLatestDate()
 	urls, urlSymbolMap := GenerateURLs(symbols, url)
 
 	var urlData []httph.URLCollectionData
@@ -216,7 +213,7 @@ func URLCollectionDataDateOrder(records [][]string, urlCollectionDataHeaderIndic
 func (grp Group) SaveCSV(dataFilePath string) error {
 	f, err := os.Create(dataFilePath + CSVExtension)
 	if err != nil {
-		lpf(logh.Error, "opening csn file for output:%+v", err)
+		lpf(logh.Error, "opening CSV file for output:%+v", err)
 		return err
 	}
 	defer f.Close()
@@ -328,6 +325,6 @@ func saveURLCollectionData(urlData []httph.URLCollectionData, dataFilePath strin
 	return nil
 }
 
-func updateLatestDate() {
-	LatestDate = time.Now().AddDate(0, 0, 1).Unix()
-}
+// func updateLatestDate() {
+// 	LatestDate = time.Now().AddDate(0, 0, 1).Unix()
+// }

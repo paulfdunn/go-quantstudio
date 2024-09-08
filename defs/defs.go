@@ -22,6 +22,7 @@ const (
 	// DIA SPDR Dow Jones Industrial Average ETF Trust
 	// IEV iShares Europe ETF
 	// IWB iShares Russell 1000 ETF
+	// IWM iShares Russell 2000 ETF
 	// QQQ Invesco QQQ Trust Series 1
 	// RSP Invesco S&P 500 Eql Wght ETF
 	// SPY SPDR S&P 500 ETF Trust

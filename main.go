@@ -18,7 +18,7 @@ import (
 	"github.com/paulfdunn/go-helper/logh"
 	"github.com/paulfdunn/go-quantstudio/defs"
 	"github.com/paulfdunn/go-quantstudio/downloader"
-	"github.com/paulfdunn/go-quantstudio/downloader/financeYahoo"
+	"github.com/paulfdunn/go-quantstudio/downloader/financeYahooChart"
 	"github.com/paulfdunn/go-quantstudio/quant"
 	"github.com/paulfdunn/go-quantstudio/quant/quantMA"
 )
@@ -90,7 +90,7 @@ func Init() {
 	lpf(logh.Info, "Data and logs being saved to directory: %s", dataDirectory)
 
 	downloader.Init(appName)
-	financeYahoo.Init(appName)
+	financeYahooChart.Init(appName)
 	quant.Init(appName)
 	quantMA.Init(appName)
 
@@ -159,7 +159,7 @@ func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []stri
 		allSymbols = append(allSymbols, strings.Split(defs.AnalysisSymbols, ",")...)
 	}
 	lpf(logh.Info, "Downloading these symbols: %+v", allSymbols)
-	group, err := financeYahoo.NewGroup(liveData, dataFilepath, *groupNamePtr, allSymbols)
+	group, err := financeYahooChart.NewGroup(liveData, dataFilepath, *groupNamePtr, allSymbols)
 	lp(logh.Info, "Downloading complete")
 	dlGroupChan <- group
 	if err != nil {
