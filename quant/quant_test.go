@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/paulfdunn/go-helper/mathh"
+	"github.com/paulfdunn/go-helper/mathh/v2"
 	"github.com/paulfdunn/go-quantstudio/downloader"
 )
 

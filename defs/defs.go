@@ -30,5 +30,6 @@ const (
 	// DDM ProShares Ultra Dow30
 	// QLD ProShares Ultra QQQ
 	// SSO ProShares Ultra S&P500
-	TradingSymbolsDefault = "dia,iev,iwb,iwm,qqq,rsp,spy,ddm,qld,sso"
+	// TQQQ ProShares UltraPro QQQ
+	TradingSymbolsDefault = "dia,iev,iwb,iwm,qqq,rsp,spy,ddm,qld,sso,tqqq"
 )

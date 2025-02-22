@@ -5,7 +5,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/paulfdunn/go-helper/logh"
+	"github.com/paulfdunn/go-helper/logh/v2"
 	"github.com/paulfdunn/go-quantstudio/downloader"
 )
 

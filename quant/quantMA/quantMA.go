@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/paulfdunn/go-helper/encodingh/jsonh"
-	"github.com/paulfdunn/go-helper/logh"
+	"github.com/paulfdunn/go-helper/encodingh/v2/jsonh"
+	"github.com/paulfdunn/go-helper/logh/v2"
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/quant"
 )
@@ -112,7 +112,7 @@ func WrappedPlotlyHandlerMA(dlGroupChan chan *downloader.Group, tradingSymbols [
 	var dlGroup *downloader.Group
 	var trdSymbols = tradingSymbols
 	return func(w http.ResponseWriter, r *http.Request) {
-		urlSymbol := r.URL.Query().Get("symbol")
+		urlSymbol := strings.ToLower(r.URL.Query().Get("symbol"))
 		mal := r.URL.Query().Get("maLength")
 		maLength, err := strconv.Atoi(mal)
 		if err != nil {

@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/paulfdunn/go-helper/logh"
-	"github.com/paulfdunn/go-helper/neth/httph"
+	"github.com/paulfdunn/go-helper/logh/v2"
+	"github.com/paulfdunn/go-helper/neth/v2/httph"
 	dl "github.com/paulfdunn/go-quantstudio/downloader"
 )
 

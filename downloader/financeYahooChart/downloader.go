@@ -7,9 +7,9 @@ import (
 	"errors"
 	"time"
 
-	"github.com/paulfdunn/go-helper/logh"
-	"github.com/paulfdunn/go-helper/mathh"
-	"github.com/paulfdunn/go-helper/neth/httph"
+	"github.com/paulfdunn/go-helper/logh/v2"
+	"github.com/paulfdunn/go-helper/mathh/v2"
+	"github.com/paulfdunn/go-helper/neth/v2/httph"
 	dl "github.com/paulfdunn/go-quantstudio/downloader"
 )
 
@@ -78,7 +78,7 @@ func urlCollectionDataToGroup(urlData []httph.URLCollectionData, urlSymbolMap ma
 		yfc := YfChartObj{Chart: YfChart{Result: yfr}}
 		err := json.Unmarshal(ucd.Bytes, &yfc)
 		if err != nil {
-			lpf(logh.Error, "unmarshal of data failed, symbol: %s, error:%s", symbol, err)
+			lpf(logh.Error, "unmarshal of data failed, symbol: %s, body:%s, error:%s", symbol, string(ucd.Bytes), err)
 			return nil, err
 		}
 		if yfc.Chart.Result == nil {

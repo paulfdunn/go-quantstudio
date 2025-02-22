@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/paulfdunn/go-helper/encodingh/jsonh"
-	"github.com/paulfdunn/go-helper/logh"
-	"github.com/paulfdunn/go-helper/mathh"
-	"github.com/paulfdunn/go-helper/neth/httph"
+	"github.com/paulfdunn/go-helper/encodingh/v2/jsonh"
+	"github.com/paulfdunn/go-helper/logh/v2"
+	"github.com/paulfdunn/go-helper/mathh/v2"
+	"github.com/paulfdunn/go-helper/neth/v2/httph"
 )
 
 type Downloader interface {
@@ -301,7 +301,10 @@ func (iss Issue) ToDatasetAsColumns() DatasetAsColumns {
 
 func collectGroup(urls []string) []httph.URLCollectionData {
 	// Get data for all symbols.
-	urlData := httph.CollectURLs(urls, URLCollectionTimeout, http.MethodGet, Threads)
+	headers := []httph.Header{
+		{Key: "User-Agent", Value: "Golang_Spider_Bot/3.0"},
+	}
+	urlData := httph.CollectURLs(urls, URLCollectionTimeout, http.MethodGet, Threads, headers)
 	// Response cannot be Marshalled; set to nil to prevent errors when saving the data
 	// and also generating SA1026 lint error.
 	for i := range urlData {

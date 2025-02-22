@@ -15,7 +15,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/paulfdunn/go-helper/logh"
+	"github.com/paulfdunn/go-helper/logh/v2"
 	"github.com/paulfdunn/go-quantstudio/defs"
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/downloader/financeYahooChart"
@@ -119,12 +119,14 @@ func main() {
 	err = downloadYahooData(*liveDataPtr, dataFilepath, tradingSymbols, dlGroupChan)
 	if err != nil {
 		lpf(logh.Error, "calling downloadYahooData: %+v", err)
+		lp(logh.Error, "exiting...")
 		os.Exit(0)
 	}
 
 	if *runMARangePtr {
 		runMARange(tradingSymbols)
 		lp(logh.Info, "runMARange complete...")
+		lp(logh.Error, "exiting...")
 		os.Exit(0)
 	}
 
