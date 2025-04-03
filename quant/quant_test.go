@@ -12,7 +12,15 @@ func init() {
 	Init("test")
 }
 
-func Example_AnnualizeGain() {
+func Example_abs() {
+	input := []float64{0, -1.0, 1.0, -1}
+	fmt.Printf("%+v", Abs(input))
+
+	// Output:
+	// [0 1 1 1]
+}
+
+func Example_annualizeGain() {
 	totalGain := 1.1
 	start := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
 	end := time.Date(2023, 1, 1, 0, 0, 0, 0, time.UTC)
@@ -37,7 +45,82 @@ func Example_AnnualizeGain() {
 	// annualizedGain from 2022-01-01 to 2022-07-01 with total gain:  1.10 is  1.21
 }
 
-func Example_MA() {
+func Example_differentiate() {
+	f1 := []float64{0, 0, 0, 1, 0, 0, -1, 0, 0}
+	result := Differentiate(f1)
+	fmt.Printf("%+v", result)
+
+	// Output:
+	// [0 0 0 1 -1 0 -1 1 0]
+}
+
+func Example_ema_1() {
+	f1 := make([]float64, 10)
+	f2 := make([]float64, 40)
+	f2 = OffsetSlice(1, f2)
+	f3 := append(f1, f2...)
+	result3 := EMA(0, false, 10, f3)
+	for _, v := range result3 {
+		fmt.Printf("%4.3f, ", v)
+	}
+
+	// Output:
+	// 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.100, 0.190, 0.271, 0.345, 0.412, 0.472, 0.527, 0.577, 0.621, 0.662, 0.699, 0.732, 0.762, 0.789, 0.814, 0.836, 0.856, 0.874, 0.891, 0.905, 0.919, 0.931, 0.942, 0.952, 0.961, 0.969, 0.977, 0.983, 0.990, 0.995, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000,
+}
+
+func Example_ema_2() {
+	f2 := make([]float64, 40)
+	f2 = OffsetSlice(1, f2)
+	result2 := EMA(0, false, 10, f2)
+	for _, v := range result2 {
+		fmt.Printf("%4.3f, ", v)
+	}
+
+	// Output:
+	// 0.100, 0.190, 0.271, 0.345, 0.412, 0.472, 0.527, 0.577, 0.621, 0.662, 0.699, 0.732, 0.762, 0.789, 0.814, 0.836, 0.856, 0.874, 0.891, 0.905, 0.919, 0.931, 0.942, 0.952, 0.961, 0.969, 0.977, 0.983, 0.990, 0.995, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000, 1.000,
+}
+
+func Example_marketClosedGain_1() {
+	close := []float64{1, 1, 1, 1, 1, 1}
+	open := []float64{1, 1, 1, 1, 1, 1}
+	result := MarketClosedGain(open, close)
+	fmt.Printf("%+v", result)
+
+	// Output:
+	// [1 1 1 1 1 1]
+}
+
+func Example_marketClosedGain_2() {
+	close := []float64{1, 1.1, 0.9090909090909091, 1, 1, 1}
+	open := []float64{1, 1, 1, 1, 1, 1}
+	result := MarketClosedGain(open, close)
+	fmt.Printf("%+v", result)
+
+	// Output:
+	// [1 1 0.9090909090909091 1 1 1]
+}
+
+func Example_marketOpenGain_1() {
+	close := []float64{1, 1, 1, 1, 1, 1}
+	open := []float64{1, 1, 1, 1, 1, 1}
+	result := MarketOpenGain(open, close)
+	fmt.Printf("%+v", result)
+
+	// Output:
+	// [1 1 1 1 1 1]
+}
+
+func Example_marketOpenGain_2() {
+	close := []float64{1, 1.1, 0.9090909090909091, 1, 1, 1}
+	open := []float64{1, 1, 1, 1, 1, 1}
+	result := MarketOpenGain(open, close)
+	fmt.Printf("%+v", result)
+
+	// Output:
+	// [1 1.1 1 1 1 1]
+}
+
+func Example_ma() {
 	f1 := []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
 	f2 := []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
 	result := MA(2, false, f1, f2)
@@ -53,7 +136,7 @@ func Example_MA() {
 	// [25 25 25 35 45 55 65 75]
 }
 
-func Example_MultiplySlice() {
+func Example_multiplySlice() {
 	f1 := []float64{1.0, 2.0, 3.0}
 	result := MultiplySlice(1.1, f1)
 	for i := range result {
@@ -65,7 +148,7 @@ func Example_MultiplySlice() {
 	// [1.1 2.2 3.3]
 }
 
-func Example_MultiplySliceGated() {
+func Example_multiplySliceGated() {
 	result := MultiplySliceGated(
 		2.0,
 		[]float64{1.0, 2.0, 3.0, 4.0, 5.0},
@@ -76,7 +159,7 @@ func Example_MultiplySliceGated() {
 	// [1 4 6 4 5]
 }
 
-func Example_MultiplySlices() {
+func Example_multiplySlices() {
 	f1 := []float64{1.0, 2.0, 3.0}
 	f2 := []float64{10.0, 20.0, 30.0}
 	result := MultiplySlices(f1, f2)
@@ -93,7 +176,7 @@ func Example_MultiplySlices() {
 	// [1000 8000 27000]
 }
 
-func Example_OffsetSlice() {
+func Example_offsetSlice() {
 	result := OffsetSlice(2.0, []float64{1.0, 2.0, 3.0, 4.0, 5.0})
 	fmt.Printf("%+v\n", result)
 
@@ -101,7 +184,7 @@ func Example_OffsetSlice() {
 	// [3 4 5 6 7]
 }
 
-func Example_ReciprocolSlice() {
+func Example_reciprocolSlice() {
 	result := ReciprocolSlice([]float64{1.0, 2.0, 4.0, 5.0})
 	fmt.Printf("%+v\n", result)
 
@@ -109,7 +192,7 @@ func Example_ReciprocolSlice() {
 	// [1 0.5 0.25 0.2]
 }
 
-func Example_SlicesAreEqualLength() {
+func Example_slicesAreEqualLength() {
 	f1 := []float64{1.0, 2.0, 3.0, 4.0}
 	f2 := []float64{10.0, 20.0, 30.0, 40.0}
 	result := SlicesAreEqualLength(f1, f2)
@@ -127,7 +210,7 @@ func Example_SlicesAreEqualLength() {
 	// Output:
 	// result was not nil but was supposed to be
 }
-func Example_SumSlices() {
+func Example_sumSlices() {
 	f1 := []float64{1.0, 2.0, 3.0, 4.0}
 	f2 := []float64{10.0, 20.0, 30.0}
 	result := SumSlices(f1, f2)

@@ -154,6 +154,7 @@ func GenerateURLs(symbols []string, url string) (urls []string, urlSymbolMap map
 		url := fmt.Sprintf(url, s, EarliestDate, LatestDate)
 		urls = append(urls, url)
 		urlSymbolMap[BaseURL(url)] = s
+		lpf(logh.Debug, "Symbol: %s, URL: %s", s, url)
 	}
 
 	return urls, urlSymbolMap
@@ -226,11 +227,11 @@ func (grp Group) SaveCSV(dataFilePath string) error {
 			lpf(logh.Error, "writing data header:%+v", err)
 			return err
 		}
-		for _, data := range issue.Dataset {
+		for indx := range issue.DatasetAsColumns.Date {
 			_, err := w.WriteString(fmt.Sprintf("%s, %s, %10.4f, %10.4f, %10.4f, %10.4f, %15.4f, %10.4f, %10.4f, %10.4f, %10.4f, %15.4f\n",
-				issue.Symbol, data.Date.Format(DateFormat),
-				data.Open, data.High, data.Low, data.Close, data.Volume,
-				data.AdjOpen, data.AdjHigh, data.AdjLow, data.AdjClose, data.AdjVolume))
+				issue.Symbol, issue.DatasetAsColumns.Date[indx].Format(DateFormat),
+				issue.DatasetAsColumns.Open[indx], issue.DatasetAsColumns.High[indx], issue.DatasetAsColumns.Low[indx], issue.DatasetAsColumns.Close[indx], issue.DatasetAsColumns.Volume[indx],
+				issue.DatasetAsColumns.AdjOpen[indx], issue.DatasetAsColumns.AdjHigh[indx], issue.DatasetAsColumns.AdjLow[indx], issue.DatasetAsColumns.AdjClose[indx], issue.DatasetAsColumns.AdjVolume[indx]))
 			if err != nil {
 				lpf(logh.Error, "writing data:%+v", err)
 				return err
@@ -315,6 +316,7 @@ func collectGroup(urls []string) []httph.URLCollectionData {
 
 func saveURLCollectionData(urlData []httph.URLCollectionData, dataFilePath string) error {
 	//lint:ignore SA1026 request was set to nil in collectGroup to avoid problem
+	//nolint:staticcheck
 	bOut, err := json.Marshal(urlData)
 	if err != nil {
 		lpf(logh.Error, "marshalling JSON bodies failed, error:%s", err)

@@ -20,6 +20,8 @@ import (
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/downloader/financeYahooChart"
 	"github.com/paulfdunn/go-quantstudio/quant"
+	"github.com/paulfdunn/go-quantstudio/quant/quantCvO"
+	"github.com/paulfdunn/go-quantstudio/quant/quantDir"
 	"github.com/paulfdunn/go-quantstudio/quant/quantMA"
 )
 
@@ -38,9 +40,11 @@ var (
 	dataDirectorySuffix = filepath.Join(`tmp`, appName)
 	dataDirectory       string
 
-	dlGroupChan chan *downloader.Group
+	dlGroupChanCvO chan *downloader.Group
+	dlGroupChanMA  chan *downloader.Group
+	dlGroupChanDir chan *downloader.Group
 
-	//go:embed assets/chartMA.js assets/index.html assets/plotly-2.16.1.min.js assets/script.js
+	//go:embed assets/chartCvO assets/chartMA assets/chartDir assets/index.html assets/plotly-2.16.1.min.js assets/script.js
 	staticFS embed.FS
 )
 
@@ -82,8 +86,11 @@ func Init() {
 	if *logFilePtr != "" {
 		logFilepath = filepath.Join(dataDirectory, *logFilePtr)
 	}
-	logh.New(appName, logFilepath, logh.DefaultLevels, logh.LoghLevel(*logLevel),
-		logh.DefaultFlags, 100, int64(10e6))
+	err = logh.New(appName, logFilepath, logh.DefaultLevels, logh.LoghLevel(*logLevel), logh.DefaultFlags, 100, int64(10e6))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	lp = logh.Map[appName].Println
 	lpf = logh.Map[appName].Printf
 	lp(logh.Debug, "user.Current(): %+v", usr)
@@ -92,9 +99,13 @@ func Init() {
 	downloader.Init(appName)
 	financeYahooChart.Init(appName)
 	quant.Init(appName)
+	quantCvO.Init(appName)
 	quantMA.Init(appName)
+	quantDir.Init(appName)
 
-	dlGroupChan = make(chan *downloader.Group, 1)
+	dlGroupChanCvO = make(chan *downloader.Group, 1)
+	dlGroupChanMA = make(chan *downloader.Group, 1)
+	dlGroupChanDir = make(chan *downloader.Group, 1)
 }
 
 func main() {
@@ -111,19 +122,21 @@ func main() {
 		lpf(logh.Error, "calling fs.Sub: %+v", err)
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
-	http.HandleFunc("/plotly-ma", quantMA.WrappedPlotlyHandlerMA(dlGroupChan, tradingSymbols))
-	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, tradingSymbols, dlGroupChan))
+	http.HandleFunc("/plotly-cvo", quantCvO.WrappedPlotlyHandler(dlGroupChanCvO, tradingSymbols))
+	http.HandleFunc("/plotly-ma", quantMA.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols))
+	http.HandleFunc("/plotly-mf", quantDir.WrappedPlotlyHandler(dlGroupChanDir, tradingSymbols))
+	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir))
 	http.HandleFunc("/symbols", wrappedSymbols(tradingSymbols))
 
-	// Download data and put it in dlGroupChan
-	err = downloadYahooData(*liveDataPtr, dataFilepath, tradingSymbols, dlGroupChan)
+	// Download data and put it in channels
+	err = downloadYahooData(*liveDataPtr, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir)
 	if err != nil {
 		lpf(logh.Error, "calling downloadYahooData: %+v", err)
 		lp(logh.Error, "exiting...")
 		os.Exit(0)
 	}
 
-	if *runMARangePtr {
+	if *runMARangePtr || false {
 		runMARange(tradingSymbols)
 		lp(logh.Info, "runMARange complete...")
 		lp(logh.Error, "exiting...")
@@ -132,14 +145,24 @@ func main() {
 
 	// Fire the handler once to run the data. This is just so the log file has the
 	// latest trade information.
-	target := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.MALengthDefault, defs.MASplitDefault)
-	req := httptest.NewRequest(http.MethodGet, target, nil)
-	w := httptest.NewRecorder()
-	quantMA.WrappedPlotlyHandlerMA(dlGroupChan, tradingSymbols)(w, req)
+	targetCvO := fmt.Sprintf("/plotly-cvo?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.CvOLengthDefault, defs.CvOSplitDefault)
+	reqCvO := httptest.NewRequest(http.MethodGet, targetCvO, nil)
+	wCvO := httptest.NewRecorder()
+	quantCvO.WrappedPlotlyHandler(dlGroupChanCvO, tradingSymbols)(wCvO, reqCvO)
+	targetMA := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.MALengthDefault, defs.MASplitDefault)
+	reqMA := httptest.NewRequest(http.MethodGet, targetMA, nil)
+	wMA := httptest.NewRecorder()
+	quantMA.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols)(wMA, reqMA)
+	targetDir := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.DirLengthDefault, defs.DirSplitDefault)
+	reqDir := httptest.NewRequest(http.MethodGet, targetDir, nil)
+	wDir := httptest.NewRecorder()
+	quantDir.WrappedPlotlyHandler(dlGroupChanDir, tradingSymbols)(wDir, reqDir)
 	// Download again (livedata is false, so this is loading the data downloaded above from file)
 	// as the above call consumed the data from the channel and the registered
 	// handler will not have data without calling downloadYahooData again.
-	downloadYahooData(false, dataFilepath, tradingSymbols, dlGroupChan)
+	if err := downloadYahooData(false, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir); err != nil {
+		log.Fatal(err)
+	}
 
 	lp(logh.Info, "******************************************************")
 	lp(logh.Info, "GUI running, open a browser to http://localhost"+defs.GUIPort+",  CTRL-C to stop")
@@ -155,7 +178,8 @@ func main() {
 	}
 }
 
-func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []string, dlGroupChan chan *downloader.Group) error {
+func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []string,
+	dlGroupChanCvO chan *downloader.Group, dlGroupChanMA chan *downloader.Group, dlGroupChanDir chan *downloader.Group) error {
 	allSymbols := tradingSymbols
 	if defs.AnalysisSymbols != "" {
 		allSymbols = append(allSymbols, strings.Split(defs.AnalysisSymbols, ",")...)
@@ -163,7 +187,9 @@ func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []stri
 	lpf(logh.Info, "Downloading these symbols: %+v", allSymbols)
 	group, err := financeYahooChart.NewGroup(liveData, dataFilepath, *groupNamePtr, allSymbols)
 	lp(logh.Info, "Downloading complete")
-	dlGroupChan <- group
+	dlGroupChanCvO <- group
+	dlGroupChanMA <- group
+	dlGroupChanDir <- group
 	if err != nil {
 		lpf(logh.Error, "calling NewGroup: %+v", err)
 		return err
@@ -172,36 +198,41 @@ func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []stri
 }
 
 func runMARange(tradingSymbols []string) {
-	dlGroup := <-dlGroupChan
+	dlGroup := <-dlGroupChanCvO
+	// dlGroup := <-dlGroupChanMA
 	// maLength := []int{200}
 	// maSplit := []float64{0.05}
 	maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200}
-	maSplit := []float64{0.015, 0.02, 0.025, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16}
-	results := make([][]float64, len(maLength))
+	maSplit := []float64{0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22}
+	results := make([][]string, len(maLength))
 	for i := range maLength {
 		splitResults := make([]float64, len(maSplit))
 		splitResults[0] = 1.0
+		results[i] = make([]string, len(maSplit))
 		for j := range maSplit {
 			symbolResults := 1.0
-			qg := quantMA.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
+			qg := quantCvO.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
+			// qg := quantMA.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
 			for _, iss := range qg.Issues {
 				symbolResults *= iss.QuantsetAsColumns.Results.AnnualizedGain
 			}
 			splitResults[j] = symbolResults
+			results[i][j] = fmt.Sprintf("%5.3f", symbolResults)
 		}
-		results[i] = splitResults
 	}
 
 	lpf(logh.Info, "runMARange output result is product of all symbol AnnualizedGain values")
 	lpf(logh.Info, fmt.Sprintf("maSplit: %+v\n", maSplit))
 	for i := range results {
-		lpf(logh.Info, fmt.Sprintf("maLength: %d %+v\n", maLength[i], results[i]))
+		lpf(logh.Info, "maLength: %d %+v\n", maLength[i], results[i])
 	}
 }
 
-func wrappedDownloadYahooData(dataFilepath string, tradingSymbols []string, dlGroupChan chan *downloader.Group) http.HandlerFunc {
+func wrappedDownloadYahooData(dataFilepath string, tradingSymbols []string,
+	dlGroupChanCvO chan *downloader.Group, dlGroupChanMA chan *downloader.Group,
+	dlGroupChanDir chan *downloader.Group) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := downloadYahooData(true, dataFilepath, tradingSymbols, dlGroupChan)
+		err := downloadYahooData(true, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -213,6 +244,8 @@ func wrappedDownloadYahooData(dataFilepath string, tradingSymbols []string, dlGr
 func wrappedSymbols(tradingSymbols []string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(tradingSymbols)
+		if err := json.NewEncoder(w).Encode(tradingSymbols); err != nil {
+			log.Fatal(err)
+		}
 	}
 }

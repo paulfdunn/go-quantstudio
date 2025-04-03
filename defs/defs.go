@@ -3,11 +3,17 @@ package defs
 const (
 	AppName = "go-quantstudio"
 	GUIPort = ":8080"
+
+	// CHANGE DEFAULTS HERE AND IN HTML FILES.
 	// Length of the MA in data points.
-	MALengthDefault = 200
+	CvOLengthDefault = 150
+	MALengthDefault  = 200
+	DirLengthDefault = 200
 	// The moving average is split +/- this amount; I.E. 0.05 means a buy at 5% above the MA
 	// and sell at 5% below the MA.
-	MASplitDefault = 0.05
+	CvOSplitDefault = 0.08
+	MASplitDefault  = 0.05
+	DirSplitDefault = 0.05
 	//
 	// Symbols being added for use in analysis. These symbols will always be downloaded, but only
 	// used as inputs for quantitative analysis with TradingSymbolsDefault
@@ -19,17 +25,21 @@ const (
 	//
 	// Symbols for trading
 	//
-	// DIA SPDR Dow Jones Industrial Average ETF Trust
-	// IEV iShares Europe ETF
-	// IWB iShares Russell 1000 ETF
-	// IWM iShares Russell 2000 ETF
-	// QQQ Invesco QQQ Trust Series 1
-	// RSP Invesco S&P 500 Eql Wght ETF
-	// SPY SPDR S&P 500 ETF Trust
+	// DIA (0.16%) SPDR Dow Jones Industrial Average ETF Trust
+	// IDEV (0.04%) iShares Core MSCI International Developed Markets ETF (large-, mid- and small-capitalization developed market equities, excluding the United States)
+	// IEFA (0.07%) iShares Core MSCI EAFE ETF large-, mid- and small-capitalization developed market equities, excluding the U.S. and Canada.
+	// QQQ (0.2%) Invesco QQQ Trust Series 1 - lower spreads and most liquidity Nasdaq 100 ETF
+	// QQQM (0.15%) Invesco Nasdaq 100 ETF - similar to QQQ, but lower cost, less liquidity, less history
+	// RSP (0.2%) Invesco S&P 500 Eql Wght ETF
+	// SPY (0.09%) SPDR S&P 500 ETF Trust
+	// VGT (0.09%) Vanguard Information Technology Index Fund ETF Shares - QQQ like
+	// VT (0.06%) Vanguard Total World Stock ETF
 	// Double ETFs below
 	// DDM ProShares Ultra Dow30
 	// QLD ProShares Ultra QQQ
 	// SSO ProShares Ultra S&P500
 	// TQQQ ProShares UltraPro QQQ
-	TradingSymbolsDefault = "dia,iev,iwb,iwm,qqq,rsp,spy,ddm,qld,sso,tqqq"
+	TradingSymbolsDefault = "dia,idev,iefa,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq"
+	// testing only
+	// TradingSymbolsDefault = "dia,ioo,qqq,spy,vt"
 )

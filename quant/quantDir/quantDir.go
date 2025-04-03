@@ -1,9 +1,10 @@
-package quantMA
+package quantDir
 
 import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"slices"
 	"strconv"
@@ -22,17 +23,15 @@ type Group struct {
 
 type Issue struct {
 	DownloaderIssue   *downloader.Issue
-	QuantsetAsColumns QuantMA
+	QuantsetAsColumns quantDir
 }
 
-type QuantMA struct {
+type quantDir struct {
 	PriceNormalizedClose []float64
 	PriceNormalizedHigh  []float64
 	PriceNormalizedLow   []float64
 	PriceNormalizedOpen  []float64
-	PriceMA              []float64
-	PriceMAHigh          []float64
-	PriceMALow           []float64
+	Direction            []float64
 	Results              quant.Results
 }
 
@@ -85,21 +84,32 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjHigh)
 	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjLow)
 	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjOpen)
-	priceMA := quant.MA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
-	priceMA = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
-	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
-	priceMAHigh := quant.MultiplySlice(1.0+maSplit, priceMA)
-	tradeMA := quant.TradeOnPrice(maLength, priceNormalizedClose, priceMAHigh, priceMALow)
-	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLength, tradeMA, *iss)
-	annualizedGain := quant.AnnualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
-	results := quant.Results{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
-		Trade: tradeMA, TradeGainVsTime: tradeGainVsTime}
+
+	// There are days where stocks largely move in one direction. On up days the low and open are of
+	// similar value, as are close and high. On down days open/high are similar and close/low are similar.
+	// See if those days mean anything.
+	direction := make([]float64, len(priceNormalizedOpen))
+	for i := 0; i < len(priceNormalizedOpen); i++ {
+		// d1 := time.Date(2022, 5, 26, 7, 30, 0, 0, time.Local)
+		// if iss.Symbol == "qqq" && issDAC.Date[i] == d1 {
+		// 	fmt.Println("debug")
+		// }
+		endDiffUp := (priceNormalizedOpen[i] - priceNormalizedLow[i]) + (priceNormalizedHigh[i] - priceNormalizedClose[i])
+		endDiffDown := (priceNormalizedHigh[i] - priceNormalizedOpen[i]) + (priceNormalizedClose[i] - priceNormalizedLow[i])
+		smallEndDiff := math.Abs(endDiffUp/(priceNormalizedClose[i]-priceNormalizedOpen[i])) < 0.1 || math.Abs(endDiffDown/(priceNormalizedClose[i]-priceNormalizedOpen[i])) < 0.1
+		if smallEndDiff &&
+			math.Abs(priceNormalizedClose[i]-priceNormalizedOpen[i])/priceNormalizedOpen[i] > 0.01 {
+			direction[i] += (priceNormalizedClose[i] - priceNormalizedOpen[i]) / priceNormalizedOpen[i]
+		}
+	}
+	// direction = quant.MA(20, true, direction)
+	// direction = quant.MultiplySlice(50, direction)
+	direction = quant.OffsetSlice(0.5, direction)
 	return Issue{DownloaderIssue: iss,
-		QuantsetAsColumns: QuantMA{PriceNormalizedClose: priceNormalizedClose,
+		QuantsetAsColumns: quantDir{PriceNormalizedClose: priceNormalizedClose,
 			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,
-			PriceMA:             priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
-			Results: results}}
+			Direction:           direction}}
 }
 
 func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []string) http.HandlerFunc {
@@ -172,57 +182,15 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"name":  "Prices",
 				"type":  "candlestick",
 			},
-			{
-				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":    qIssue.QuantsetAsColumns.PriceMALow,
-				"name": "MALow",
-				"type": "scatter",
-				// "stackgroup": "one",
-				"line": map[string]interface{}{
-					"color": "rgba(255,65,54,0.5)",
-				},
-			},
-			{
-				"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":         qIssue.QuantsetAsColumns.PriceMA,
-				"name":      "MA",
-				"type":      "scatter",
-				"fill":      "tonexty",
-				"fillcolor": "rgba(255,164,157,0.3)",
-				"line": map[string]interface{}{
-					"color": "rgba(255,65,54,0.5)",
-				},
-			},
-			{
-				"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":         qIssue.QuantsetAsColumns.PriceMAHigh,
-				"name":      "MAHigh",
-				"type":      "scatter",
-				"fill":      "tonexty",
-				"fillcolor": "rgba(0, 140, 8, 0.3)",
-				"line": map[string]interface{}{
-					"color": "rgba(0, 140, 8, 0.5)",
-				},
-			},
-			{
-				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":    qIssue.QuantsetAsColumns.Results.TradeGainVsTime,
-				"name": "TradeGainVsTime",
-				"type": "scatter",
-				// "yaxis": "y3",
-				"line": map[string]interface{}{
-					"color": "rgba(0, 139, 147, 1)",
-				},
-			},
 			// Second y-axis
 			{
 				"x":     qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":     qIssue.QuantsetAsColumns.Results.Trade,
-				"name":  "Trade",
+				"y":     qIssue.QuantsetAsColumns.Direction,
+				"name":  "Direction",
 				"type":  "scatter",
 				"yaxis": "y2",
 				"line": map[string]interface{}{
-					"color": "rgba(255, 172, 47, 1)",
+					"color": "rgba(47, 255, 61, 0.6)",
 				},
 			},
 		},

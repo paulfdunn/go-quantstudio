@@ -13,7 +13,7 @@ type Results struct {
 	AnnualizedGain  float64
 	TotalGain       float64
 	TradeHistory    string
-	TradeMA         []int
+	Trade           []int
 	TradeGainVsTime []float64
 }
 
@@ -29,8 +29,8 @@ var (
 	lp      func(level logh.LoghLevel, v ...interface{})
 	lpf     func(level logh.LoghLevel, format string, v ...interface{})
 
-	stopLoss      = 0.9
-	stopLossDelay = 15
+	// stopLoss      = 0.9
+	// stopLossDelay = 15
 )
 
 func Init(appNameInit string) {
@@ -39,12 +39,102 @@ func Init(appNameInit string) {
 	lpf = logh.Map[appName].Printf
 }
 
+// Abs will return the absolute value of the input
+func Abs(input []float64) []float64 {
+	out := make([]float64, len(input))
+	for i := 0; i < len(input); i++ {
+		out[i] = math.Abs(input[i])
+	}
+	return out
+}
+
 // AnnualizedGain will return the annualized gain given a totalGain achieved between the startDate
 // and endDate.
 func AnnualizedGain(totalGain float64, startDate time.Time, endDate time.Time) float64 {
 	diff := endDate.Sub(startDate)
 	years := diff.Hours() / (24 * 365)
 	return math.Pow(totalGain, 1/years)
+}
+
+func Differentiate(input []float64) []float64 {
+	out := make([]float64, len(input))
+	out[0] = 0
+	for i := 1; i < len(input); i++ {
+		out[i] = input[i] - input[i-1]
+	}
+	return out
+}
+
+// MarketClosedGain will return the cummulative gain for an issue that is only held during market close.
+// I.E. you are constantly buying at close, selling at open.
+func MarketClosedGain(open []float64, close []float64) []float64 {
+	if err := SlicesAreEqualLength(open, close); err != nil {
+		return nil
+	}
+
+	out := make([]float64, len(open))
+	out[0] = 1.0
+	for i := 1; i < len(open); i++ {
+		out[i] = out[i-1] * (open[i] / close[i-1])
+	}
+
+	return out
+}
+
+// MarketOpenGain will return the cummulative gain for an issue that is only held during market open.
+// I.E. you are constantly buying at open, selling at close.
+func MarketOpenGain(open []float64, close []float64) []float64 {
+	if err := SlicesAreEqualLength(open, close); err != nil {
+		return nil
+	}
+
+	out := make([]float64, len(open))
+	out[0] = 1.0
+	for i := 1; i < len(open); i++ {
+		out[i] = out[i-1] * (close[i] / open[i])
+	}
+
+	return out
+}
+
+// EMA is the exponential moving average of the dataSlices.
+// If biasStart==true the initial points of the series are filled with the value
+// of the MA on the first point after length points.
+func EMA(length int, biasStart bool, tau int, dataSlices ...[]float64) []float64 {
+	if err := SlicesAreEqualLength(dataSlices...); err != nil {
+		return nil
+	}
+
+	summedData := SumSlices(dataSlices...)
+	slices := float64(len(dataSlices))
+	firstFullCycle := 0.0
+	dataPoints := len(dataSlices[0])
+	out := make([]float64, dataPoints)
+	weights := 0.0
+	for i := 0; i <= 3*tau; i++ {
+		weights += math.Exp(float64(-i) / float64(tau))
+	}
+	for i := range summedData {
+		sum := 0.0
+		for j := i; j >= i-3*tau; j-- {
+			if j < 0 {
+				break
+			}
+			sum += math.Exp(float64(-(i-j))/float64(tau)) * summedData[j] / slices
+		}
+		out[i] = sum / weights
+		if i == length {
+			firstFullCycle = out[i]
+		}
+	}
+
+	if biasStart {
+		for i := 0; i < length; i++ {
+			out[i] = firstFullCycle
+		}
+	}
+
+	return out
 }
 
 // MA is the moving average of the dataSlices.
@@ -176,11 +266,7 @@ func SumSlices(dataSlices ...[]float64) []float64 {
 // Trade delays delay number of points, then compares price to the buyLevel and sellLevel,
 // and returns an output slice indicating Buy or Sell at
 // each point. Note that Sell is returned for the first delay number of points.
-func TradeOnPrice(delay int, close, price, buyLevel, sellLevel []float64) []int {
-	if err := SlicesAreEqualLength(close, price); err != nil {
-		return nil
-	}
-
+func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) []int {
 	out := make([]int, len(price))
 	for i := range price {
 		if i <= delay-1 {
@@ -189,9 +275,9 @@ func TradeOnPrice(delay int, close, price, buyLevel, sellLevel []float64) []int 
 		}
 
 		switch {
-		case close[i] > buyLevel[i]:
+		case price[i] > buyLevel[i]:
 			out[i] = Buy
-		case close[i] < sellLevel[i]:
+		case price[i] < sellLevel[i]:
 			out[i] = Sell
 		default:
 			out[i] = out[i-1]
@@ -201,45 +287,45 @@ func TradeOnPrice(delay int, close, price, buyLevel, sellLevel []float64) []int 
 }
 
 // tradeAddStop modifies the input trade signal to sell on stop.
-func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
-	tradeOut = make([]int, len(trade))
+// func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
+// 	tradeOut = make([]int, len(trade))
 
-	highCloseSinceBuy := 0.0
-	stopTriggered := false
-	stopTriggeredIndex := 0
-	for i := 1; i < len(trade); i++ {
-		if stopTriggered {
-			tradeOut[i] = Sell
-			highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-			if i > stopTriggeredIndex+stopLossDelay {
-				stopTriggered = false
-			}
-			continue
-		}
+// 	highCloseSinceBuy := 0.0
+// 	stopTriggered := false
+// 	stopTriggeredIndex := 0
+// 	for i := 1; i < len(trade); i++ {
+// 		if stopTriggered {
+// 			tradeOut[i] = Sell
+// 			highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+// 			if i > stopTriggeredIndex+stopLossDelay {
+// 				stopTriggered = false
+// 			}
+// 			continue
+// 		}
 
-		switch {
-		case trade[i-1] == Buy && trade[i] == Buy:
-			if dlIssue.DatasetAsColumns.AdjClose[i] > highCloseSinceBuy {
-				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-			}
-		case trade[i-1] == Sell && trade[i] == Buy:
-			if i == len(trade)-1 {
-				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-			} else {
-				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjOpen[i+1]
-			}
-		}
+// 		switch {
+// 		case trade[i-1] == Buy && trade[i] == Buy:
+// 			if dlIssue.DatasetAsColumns.AdjClose[i] > highCloseSinceBuy {
+// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+// 			}
+// 		case trade[i-1] == Sell && trade[i] == Buy:
+// 			if i == len(trade)-1 {
+// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+// 			} else {
+// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjOpen[i+1]
+// 			}
+// 		}
 
-		tradeOut[i] = trade[i]
-		if trade[i] == Buy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
-			stopTriggered = true
-			stopTriggeredIndex = i
-			tradeOut[i] = Sell
-		}
-	}
+// 		tradeOut[i] = trade[i]
+// 		if trade[i] == Buy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
+// 			stopTriggered = true
+// 			stopTriggeredIndex = i
+// 			tradeOut[i] = Sell
+// 		}
+// 	}
 
-	return tradeOut
-}
+// 	return tradeOut
+// }
 
 // TradeGain takes in input slice trade with values Buy/Sell, and after delay number of points,
 // applies the Buy/Sell signals to dlIssue to proces a tradeHistory, gain (total gain), and

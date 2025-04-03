@@ -1,4 +1,4 @@
-package quantMA
+package quantCvO
 
 import (
 	"encoding/json"
@@ -22,18 +22,29 @@ type Group struct {
 
 type Issue struct {
 	DownloaderIssue   *downloader.Issue
-	QuantsetAsColumns QuantMA
+	QuantsetAsColumns QuantCvO
 }
 
-type QuantMA struct {
-	PriceNormalizedClose []float64
-	PriceNormalizedHigh  []float64
-	PriceNormalizedLow   []float64
-	PriceNormalizedOpen  []float64
-	PriceMA              []float64
-	PriceMAHigh          []float64
-	PriceMALow           []float64
-	Results              quant.Results
+type QuantCvO struct {
+	PriceNormalizedClose   []float64
+	PriceNormalizedHigh    []float64
+	PriceNormalizedLow     []float64
+	PriceNormalizedOpen    []float64
+	PriceMA                []float64
+	PriceMAHigh            []float64
+	PriceMALow             []float64
+	GainMarketClosed       []float64
+	GainMarketClosedMA     []float64
+	GainMarketClosedMAHigh []float64
+	GainMarketClosedMALow  []float64
+	GainMarketOpen         []float64
+	GainMarketOpenMA       []float64
+	GainMarketOpenMAHigh   []float64
+	GainMarketOpenMALow    []float64
+	SlopeC                 []float64
+	SlopeO                 []float64
+	SlopeCvO               []float64
+	Results                quant.Results
 }
 
 var (
@@ -89,16 +100,41 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	priceMA = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
 	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
 	priceMAHigh := quant.MultiplySlice(1.0+maSplit, priceMA)
-	tradeMA := quant.TradeOnPrice(maLength, priceNormalizedClose, priceMAHigh, priceMALow)
-	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLength, tradeMA, *iss)
+	gainMarketClosed := quant.MarketClosedGain(issDAC.AdjOpen, issDAC.AdjClose)
+	gainNormalizedMarketClosed := quant.MultiplySlice(1.0/gainMarketClosed[maLength], gainMarketClosed)
+	gainMarketClosedMA := quant.MA(maLength, true, gainNormalizedMarketClosed)
+	gainMarketClosedMALow := quant.MultiplySlice(1.0-maSplit, gainMarketClosedMA)
+	gainMarketClosedMAHigh := quant.MultiplySlice(1.0+maSplit, gainMarketClosedMA)
+	gainMarketOpen := quant.MarketOpenGain(issDAC.AdjOpen, issDAC.AdjClose)
+	gainNormalizedMarketOpen := quant.MultiplySlice(1.0/gainMarketOpen[maLength], gainMarketOpen)
+	gainMarketOpenMA := quant.MA(maLength, true, gainNormalizedMarketOpen)
+	gainMarketOpenMALow := quant.MultiplySlice(1.0-maSplit, gainMarketOpenMA)
+	gainMarketOpenMAHigh := quant.MultiplySlice(1.0+maSplit, gainMarketOpenMA)
+
+	slopeC := quant.MultiplySlice(200, quant.EMA(0, false, 50, quant.MultiplySlices(quant.Differentiate(gainMarketClosedMA), quant.ReciprocolSlice(gainMarketClosedMA))))
+	slopeO := quant.MultiplySlice(200, quant.EMA(0, false, 50, quant.MultiplySlices(quant.Differentiate(gainMarketOpenMA), quant.ReciprocolSlice(gainMarketOpenMA))))
+	slopeCvO := quant.SumSlices(slopeC, slopeO)
+	tradeLevel := make([]float64, len(slopeCvO))
+
+	tradeCvO := quant.TradeOnPrice(maLength, slopeCvO,
+		quant.OffsetSlice(maSplit, tradeLevel),
+		quant.OffsetSlice(-maSplit, tradeLevel))
+
+	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLength, tradeCvO, *iss)
 	annualizedGain := quant.AnnualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
-	results := quant.Results{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
-		Trade: tradeMA, TradeGainVsTime: tradeGainVsTime}
+	results := quant.Results{AnnualizedGain: annualizedGain,
+		TotalGain: totalGain, TradeHistory: tradeHistory,
+		Trade: tradeCvO, TradeGainVsTime: tradeGainVsTime}
 	return Issue{DownloaderIssue: iss,
-		QuantsetAsColumns: QuantMA{PriceNormalizedClose: priceNormalizedClose,
+		QuantsetAsColumns: QuantCvO{PriceNormalizedClose: priceNormalizedClose,
 			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,
 			PriceMA:             priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
+			GainMarketClosed: gainNormalizedMarketClosed, GainMarketClosedMA: gainMarketClosedMA,
+			GainMarketClosedMAHigh: gainMarketClosedMAHigh, GainMarketClosedMALow: gainMarketClosedMALow,
+			GainMarketOpen: gainNormalizedMarketOpen, GainMarketOpenMA: gainMarketOpenMA,
+			GainMarketOpenMAHigh: gainMarketOpenMAHigh, GainMarketOpenMALow: gainMarketOpenMALow,
+			SlopeC: slopeC, SlopeO: slopeO, SlopeCvO: slopeCvO,
 			Results: results}}
 }
 
@@ -171,37 +207,120 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"close": qIssue.QuantsetAsColumns.PriceNormalizedClose,
 				"name":  "Prices",
 				"type":  "candlestick",
+				// "xaxis": "x2",
 			},
+			// {
+			// 	"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+			// 	"y":    qIssue.QuantsetAsColumns.PriceMALow,
+			// 	"name": "MALow",
+			// 	"type": "scatter",
+			// 	// "stackgroup": "one",
+			// 	"line": map[string]interface{}{
+			// 		"color": "rgba(255,65,54,0.5)",
+			// 	},
+			// },
+			// {
+			// 	"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
+			// 	"y":         qIssue.QuantsetAsColumns.PriceMA,
+			// 	"name":      "MA",
+			// 	"type":      "scatter",
+			// 	"fill":      "tonexty",
+			// 	"fillcolor": "rgba(255,164,157,0.3)",
+			// 	"line": map[string]interface{}{
+			// 		"color": "rgba(255,65,54,0.5)",
+			// 	},
+			// },
+			// {
+			// 	"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
+			// 	"y":         qIssue.QuantsetAsColumns.PriceMAHigh,
+			// 	"name":      "MAHigh",
+			// 	"type":      "scatter",
+			// 	"fill":      "tonexty",
+			// 	"fillcolor": "rgba(0, 140, 8, 0.3)",
+			// 	"line": map[string]interface{}{
+			// 		"color": "rgba(0, 140, 8, 0.5)",
+			// 	},
+			// },
+			// {
+			// 	"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+			// 	"y":    qIssue.QuantsetAsColumns.GainMarketClosedMALow,
+			// 	"name": "GainMarketClosedMALow",
+			// 	"type": "scatter",
+			// 	// "stackgroup": "one",
+			// 	"line": map[string]interface{}{
+			// 		"color": "rgba(255,65,54,0.5)",
+			// 	},
+			// },
 			{
 				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":    qIssue.QuantsetAsColumns.PriceMALow,
-				"name": "MALow",
+				"y":    qIssue.QuantsetAsColumns.GainMarketClosedMA,
+				"name": "GainMarketClosedMA",
 				"type": "scatter",
-				// "stackgroup": "one",
+				// "fill":      "tonexty",
+				// "fillcolor": "rgba(255,164,157,0.3)",
 				"line": map[string]interface{}{
 					"color": "rgba(255,65,54,0.5)",
 				},
 			},
+			// {
+			// 	"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
+			// 	"y":         qIssue.QuantsetAsColumns.GainMarketClosedMAHigh,
+			// 	"name":      "GainMarketClosedMAHigh",
+			// 	"type":      "scatter",
+			// 	"fill":      "tonexty",
+			// 	"fillcolor": "rgba(0, 140, 8, 0.3)",
+			// 	"line": map[string]interface{}{
+			// 		"color": "rgba(0, 140, 8, 0.5)",
+			// 	},
+			// },
 			{
-				"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":         qIssue.QuantsetAsColumns.PriceMA,
-				"name":      "MA",
-				"type":      "scatter",
-				"fill":      "tonexty",
-				"fillcolor": "rgba(255,164,157,0.3)",
+				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":    qIssue.QuantsetAsColumns.GainMarketClosed,
+				"name": "GainMarketClosed",
+				"type": "scatter",
 				"line": map[string]interface{}{
-					"color": "rgba(255,65,54,0.5)",
+					"color": "rgba(255, 0, 0,1)",
 				},
 			},
+			// {
+			// 	"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+			// 	"y":    qIssue.QuantsetAsColumns.GainMarketOpenMALow,
+			// 	"name": "GainMarketOpenMALow",
+			// 	"type": "scatter",
+			// 	// "stackgroup": "one",
+			// 	"line": map[string]interface{}{
+			// 		"color": "rgba(255,65,54,0.5)",
+			// 	},
+			// },
 			{
-				"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
-				"y":         qIssue.QuantsetAsColumns.PriceMAHigh,
-				"name":      "MAHigh",
-				"type":      "scatter",
-				"fill":      "tonexty",
-				"fillcolor": "rgba(0, 140, 8, 0.3)",
+				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":    qIssue.QuantsetAsColumns.GainMarketOpenMA,
+				"name": "GainMarketOpenMA",
+				"type": "scatter",
+				// "fill":      "tonexty",
+				// "fillcolor": "rgba(255,164,157,0.3)",
 				"line": map[string]interface{}{
-					"color": "rgba(0, 140, 8, 0.5)",
+					"color": "rgba(36, 166, 41, 0.39)",
+				},
+			},
+			// {
+			// 	"x":         qIssue.DownloaderIssue.DatasetAsColumns.Date,
+			// 	"y":         qIssue.QuantsetAsColumns.GainMarketOpenMAHigh,
+			// 	"name":      "GainMarketOpenMAHigh",
+			// 	"type":      "scatter",
+			// 	"fill":      "tonexty",
+			// 	"fillcolor": "rgba(0, 140, 8, 0.3)",
+			// 	"line": map[string]interface{}{
+			// 		"color": "rgba(0, 140, 8, 0.5)",
+			// 	},
+			// },
+			{
+				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":    qIssue.QuantsetAsColumns.GainMarketOpen,
+				"name": "GainMarketOpen",
+				"type": "scatter",
+				"line": map[string]interface{}{
+					"color": "rgba(0, 255, 0,1)",
 				},
 			},
 			{
@@ -209,9 +328,8 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"y":    qIssue.QuantsetAsColumns.Results.TradeGainVsTime,
 				"name": "TradeGainVsTime",
 				"type": "scatter",
-				// "yaxis": "y3",
 				"line": map[string]interface{}{
-					"color": "rgba(0, 139, 147, 1)",
+					"color": "rgba(0, 139, 147,1)",
 				},
 			},
 			// Second y-axis
@@ -222,7 +340,37 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"type":  "scatter",
 				"yaxis": "y2",
 				"line": map[string]interface{}{
-					"color": "rgba(255, 172, 47, 1)",
+					"color": "rgba(255, 172, 47,1)",
+				},
+			},
+			{
+				"x":     qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":     qIssue.QuantsetAsColumns.SlopeCvO,
+				"name":  "SlopeCvO",
+				"type":  "scatter",
+				"yaxis": "y2",
+				"line": map[string]interface{}{
+					"color": "rgba(255, 47, 172, 1)",
+				},
+			},
+			{
+				"x":     qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":     qIssue.QuantsetAsColumns.SlopeC,
+				"name":  "SlopeC",
+				"type":  "scatter",
+				"yaxis": "y2",
+				"line": map[string]interface{}{
+					"color": "rgba(5, 69, 233, 0.43)",
+				},
+			},
+			{
+				"x":     qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":     qIssue.QuantsetAsColumns.SlopeO,
+				"name":  "SlopeO",
+				"type":  "scatter",
+				"yaxis": "y2",
+				"line": map[string]interface{}{
+					"color": "rgba(5, 189, 57, 0.56)",
 				},
 			},
 		},
@@ -275,7 +423,7 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 			"yaxis2": map[string]interface{}{
 				"title":          fmt.Sprintf("Trade (algorithm:moving average, buy=%d, sell=%d)", quant.Buy, quant.Sell),
 				"autorange":      false,
-				"range":          []float64{0.0, 1.0},
+				"range":          []float64{-1.0, 1.0},
 				"showspikes":     true,
 				"spikemode":      "across",
 				"spikedash":      "solid",
@@ -289,17 +437,6 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"overlaying": "y",
 				"side":       "right",
 			},
-			// "yaxis3": map[string]interface{}{
-			// 	"title":      "Trade Gain (%)",
-			// 	"autorange":  true,
-			// 	"fixedrange": false,
-			// 	"type":       "log",
-			// 	// Below are only needed when using single row
-			// 	"anchor":     "free",
-			// 	"overlaying": "y",
-			// 	"side":       "right",
-			// 	"position":   0.93,
-			// },
 		},
 		"text": qIssue.QuantsetAsColumns.Results.TradeHistory,
 	}
