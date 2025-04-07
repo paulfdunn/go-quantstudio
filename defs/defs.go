@@ -6,12 +6,12 @@ const (
 
 	// CHANGE DEFAULTS HERE AND IN HTML FILES.
 	// Length of the MA in data points.
-	CvOLengthDefault = 150
+	CvOLengthDefault = 100
 	MALengthDefault  = 200
 	DirLengthDefault = 200
 	// The moving average is split +/- this amount; I.E. 0.05 means a buy at 5% above the MA
 	// and sell at 5% below the MA.
-	CvOSplitDefault = 0.08
+	CvOSplitDefault = 0.04
 	MASplitDefault  = 0.05
 	DirSplitDefault = 0.05
 	//
@@ -27,7 +27,8 @@ const (
 	//
 	// DIA (0.16%) SPDR Dow Jones Industrial Average ETF Trust
 	// IDEV (0.04%) iShares Core MSCI International Developed Markets ETF (large-, mid- and small-capitalization developed market equities, excluding the United States)
-	// IEFA (0.07%) iShares Core MSCI EAFE ETF large-, mid- and small-capitalization developed market equities, excluding the U.S. and Canada.
+	// IEFA (0.07%) iShares Core MSCI EAFE ETF large-, mid- and small-capitalization developed market equities, excluding the U.S. and Canada. (Not currency hedged; HEFA is the equivalent ETF hedged in USD.)
+	// PSQ (0.95%) ProShares Short QQQ
 	// QQQ (0.2%) Invesco QQQ Trust Series 1 - lower spreads and most liquidity Nasdaq 100 ETF
 	// QQQM (0.15%) Invesco Nasdaq 100 ETF - similar to QQQ, but lower cost, less liquidity, less history
 	// RSP (0.2%) Invesco S&P 500 Eql Wght ETF
@@ -39,7 +40,7 @@ const (
 	// QLD ProShares Ultra QQQ
 	// SSO ProShares Ultra S&P500
 	// TQQQ ProShares UltraPro QQQ
-	TradingSymbolsDefault = "dia,idev,iefa,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq"
+	TradingSymbolsDefault = "dia,idev,iefa,psq,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq"
 	// testing only
 	// TradingSymbolsDefault = "dia,ioo,qqq,spy,vt"
 )

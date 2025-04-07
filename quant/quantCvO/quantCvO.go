@@ -96,23 +96,19 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjHigh)
 	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjLow)
 	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjOpen)
-	priceMA := quant.MA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
-	priceMA = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
-	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
-	priceMAHigh := quant.MultiplySlice(1.0+maSplit, priceMA)
 	gainMarketClosed := quant.MarketClosedGain(issDAC.AdjOpen, issDAC.AdjClose)
 	gainNormalizedMarketClosed := quant.MultiplySlice(1.0/gainMarketClosed[maLength], gainMarketClosed)
-	gainMarketClosedMA := quant.MA(maLength, true, gainNormalizedMarketClosed)
+	gainMarketClosedMA := quant.EMA(maLength, true, gainNormalizedMarketClosed)
 	gainMarketClosedMALow := quant.MultiplySlice(1.0-maSplit, gainMarketClosedMA)
 	gainMarketClosedMAHigh := quant.MultiplySlice(1.0+maSplit, gainMarketClosedMA)
 	gainMarketOpen := quant.MarketOpenGain(issDAC.AdjOpen, issDAC.AdjClose)
 	gainNormalizedMarketOpen := quant.MultiplySlice(1.0/gainMarketOpen[maLength], gainMarketOpen)
-	gainMarketOpenMA := quant.MA(maLength, true, gainNormalizedMarketOpen)
+	gainMarketOpenMA := quant.EMA(maLength, true, gainNormalizedMarketOpen)
 	gainMarketOpenMALow := quant.MultiplySlice(1.0-maSplit, gainMarketOpenMA)
 	gainMarketOpenMAHigh := quant.MultiplySlice(1.0+maSplit, gainMarketOpenMA)
 
-	slopeC := quant.MultiplySlice(200, quant.EMA(0, false, 50, quant.MultiplySlices(quant.Differentiate(gainMarketClosedMA), quant.ReciprocolSlice(gainMarketClosedMA))))
-	slopeO := quant.MultiplySlice(200, quant.EMA(0, false, 50, quant.MultiplySlices(quant.Differentiate(gainMarketOpenMA), quant.ReciprocolSlice(gainMarketOpenMA))))
+	slopeC := quant.MultiplySlice(200, quant.EMA(30, false, quant.MultiplySlices(quant.Differentiate(gainMarketClosedMA), quant.ReciprocolSlice(gainMarketClosedMA))))
+	slopeO := quant.MultiplySlice(200, quant.EMA(30, false, quant.MultiplySlices(quant.Differentiate(gainMarketOpenMA), quant.ReciprocolSlice(gainMarketOpenMA))))
 	slopeCvO := quant.SumSlices(slopeC, slopeO)
 	tradeLevel := make([]float64, len(slopeCvO))
 
@@ -129,8 +125,7 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 		QuantsetAsColumns: QuantCvO{PriceNormalizedClose: priceNormalizedClose,
 			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,
-			PriceMA:             priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
-			GainMarketClosed: gainNormalizedMarketClosed, GainMarketClosedMA: gainMarketClosedMA,
+			GainMarketClosed:    gainNormalizedMarketClosed, GainMarketClosedMA: gainMarketClosedMA,
 			GainMarketClosedMAHigh: gainMarketClosedMAHigh, GainMarketClosedMALow: gainMarketClosedMALow,
 			GainMarketOpen: gainNormalizedMarketOpen, GainMarketOpenMA: gainMarketOpenMA,
 			GainMarketOpenMAHigh: gainMarketOpenMAHigh, GainMarketOpenMALow: gainMarketOpenMALow,

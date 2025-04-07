@@ -59,7 +59,7 @@ func Example_ema_1() {
 	f2 := make([]float64, 40)
 	f2 = OffsetSlice(1, f2)
 	f3 := append(f1, f2...)
-	result3 := EMA(0, false, 10, f3)
+	result3 := EMA(10, false, f3)
 	for _, v := range result3 {
 		fmt.Printf("%4.3f, ", v)
 	}
@@ -71,7 +71,7 @@ func Example_ema_1() {
 func Example_ema_2() {
 	f2 := make([]float64, 40)
 	f2 = OffsetSlice(1, f2)
-	result2 := EMA(0, false, 10, f2)
+	result2 := EMA(10, false, f2)
 	for _, v := range result2 {
 		fmt.Printf("%4.3f, ", v)
 	}

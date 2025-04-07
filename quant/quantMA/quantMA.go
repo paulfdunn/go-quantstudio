@@ -85,6 +85,7 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjHigh)
 	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjLow)
 	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjOpen)
+	// priceMA := quant.EMA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
 	priceMA := quant.MA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
 	priceMA = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
 	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
