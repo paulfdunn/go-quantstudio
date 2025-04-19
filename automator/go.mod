@@ -5,7 +5,7 @@ go 1.21.8
 require (
 	github.com/chromedp/chromedp v0.9.5
 	github.com/paulfdunn/go-helper/logh/v2 v2.0.5
-	github.com/paulfdunn/go-quantstudio v0.0.0-20240323024008-ce1fe4b66498
+	github.com/paulfdunn/go-quantstudio v0.0.0-20250222002434-38285f70165d
 )
 
 require (

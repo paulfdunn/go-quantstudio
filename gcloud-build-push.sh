@@ -1,12 +1,5 @@
 #!/bin/zsh
-colima stop
 colima start
-
-# You have to delete all prior containers/images, otherwise the build fails with:
-# internal/syscall/execenv: /usr/local/go/pkg/tool/linux_amd64/compile: signal: segmentation fault (core dumped)
-# Actually the build just intermittently fails - retry if it fails for the above.
-docker container prune -f
-docker image prune -a -f
 
 # Build and push container to Artifact Registry
 export GCLOUD_PROJECT="go-quantstudio-new-430921"
@@ -17,6 +10,7 @@ export IMAGE_TAG=${REGION}-docker.pkg.dev/$GCLOUD_PROJECT/$REPO/$IMAGE
 
 docker build -t $IMAGE_TAG --platform linux/amd64 . && docker push $IMAGE_TAG
 
+# Use the below instructions to use the new container in Cloud Run Services:
 # Go to the artifact registry: https://console.cloud.google.com/artifacts?hl=en&inv=1&invt=AbtGMw&project=go-quantstudio-new-430921
 # Select:  go-quantstudio-new-repo
 # Select:  go-quantstudio

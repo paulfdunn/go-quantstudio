@@ -20,9 +20,9 @@ import (
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/downloader/financeYahooChart"
 	"github.com/paulfdunn/go-quantstudio/quant"
+	"github.com/paulfdunn/go-quantstudio/quant/quant2MA"
 	"github.com/paulfdunn/go-quantstudio/quant/quantCvO"
-	"github.com/paulfdunn/go-quantstudio/quant/quantDir"
-	"github.com/paulfdunn/go-quantstudio/quant/quantMA"
+	"github.com/paulfdunn/go-quantstudio/quant/quantMAH"
 )
 
 var (
@@ -44,7 +44,7 @@ var (
 	dlGroupChanMA  chan *downloader.Group
 	dlGroupChanDir chan *downloader.Group
 
-	//go:embed assets/chartCvO assets/chartMA assets/chartDir assets/index.html assets/plotly-2.16.1.min.js assets/script.js
+	//go:embed assets/chartCvO assets/chartMAH assets/chart2MA assets/index.html assets/plotly-2.16.1.min.js assets/script.js
 	staticFS embed.FS
 )
 
@@ -100,8 +100,8 @@ func Init() {
 	financeYahooChart.Init(appName)
 	quant.Init(appName)
 	quantCvO.Init(appName)
-	quantMA.Init(appName)
-	quantDir.Init(appName)
+	quantMAH.Init(appName)
+	quant2MA.Init(appName)
 
 	dlGroupChanCvO = make(chan *downloader.Group, 1)
 	dlGroupChanMA = make(chan *downloader.Group, 1)
@@ -123,8 +123,8 @@ func main() {
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
 	http.HandleFunc("/plotly-cvo", quantCvO.WrappedPlotlyHandler(dlGroupChanCvO, tradingSymbols))
-	http.HandleFunc("/plotly-ma", quantMA.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols))
-	http.HandleFunc("/plotly-mf", quantDir.WrappedPlotlyHandler(dlGroupChanDir, tradingSymbols))
+	http.HandleFunc("/plotly-ma", quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols))
+	http.HandleFunc("/plotly-mf", quant2MA.WrappedPlotlyHandler(dlGroupChanDir, tradingSymbols))
 	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir))
 	http.HandleFunc("/symbols", wrappedSymbols(tradingSymbols))
 
@@ -149,14 +149,14 @@ func main() {
 	reqCvO := httptest.NewRequest(http.MethodGet, targetCvO, nil)
 	wCvO := httptest.NewRecorder()
 	quantCvO.WrappedPlotlyHandler(dlGroupChanCvO, tradingSymbols)(wCvO, reqCvO)
-	targetMA := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.MALengthDefault, defs.MASplitDefault)
-	reqMA := httptest.NewRequest(http.MethodGet, targetMA, nil)
-	wMA := httptest.NewRecorder()
-	quantMA.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols)(wMA, reqMA)
-	targetDir := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.DirLengthDefault, defs.DirSplitDefault)
+	targetMAH := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.MALengthDefault, defs.MASplitDefault)
+	reqMAH := httptest.NewRequest(http.MethodGet, targetMAH, nil)
+	wMAH := httptest.NewRecorder()
+	quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols)(wMAH, reqMAH)
+	targetDir := fmt.Sprintf("/plotly-ma?symbol=%s&maLengthLF=%d&maLengthHF=%d", tradingSymbols[0], defs.MALengthDefaultLF, defs.MALengthDefaultHF)
 	reqDir := httptest.NewRequest(http.MethodGet, targetDir, nil)
 	wDir := httptest.NewRecorder()
-	quantDir.WrappedPlotlyHandler(dlGroupChanDir, tradingSymbols)(wDir, reqDir)
+	quant2MA.WrappedPlotlyHandler(dlGroupChanDir, tradingSymbols)(wDir, reqDir)
 	// Download again (livedata is false, so this is loading the data downloaded above from file)
 	// as the above call consumed the data from the channel and the registered
 	// handler will not have data without calling downloadYahooData again.
@@ -197,13 +197,14 @@ func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []stri
 	return nil
 }
 
+// runMARange can be used to run a range of inputs in order to see parameter sensitivity.
 func runMARange(tradingSymbols []string) {
 	dlGroup := <-dlGroupChanCvO
 	// dlGroup := <-dlGroupChanMA
-	// maLength := []int{200}
-	// maSplit := []float64{0.05}
-	maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200}
-	maSplit := []float64{0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22}
+	// maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200}
+	// maSplit := []float64{0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22}
+	maLength := []int{50, 60, 70, 80, 90, 100, 110, 120}
+	maSplit := []int{10, 12, 14, 16, 18, 20, 25, 30}
 	results := make([][]string, len(maLength))
 	for i := range maLength {
 		splitResults := make([]float64, len(maSplit))
@@ -211,8 +212,9 @@ func runMARange(tradingSymbols []string) {
 		results[i] = make([]string, len(maSplit))
 		for j := range maSplit {
 			symbolResults := 1.0
-			qg := quantCvO.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
-			// qg := quantMA.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
+			// qg := quantCvO.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
+			// qg := quantMAH.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
+			qg := quant2MA.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
 			for _, iss := range qg.Issues {
 				symbolResults *= iss.QuantsetAsColumns.Results.AnnualizedGain
 			}

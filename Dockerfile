@@ -6,7 +6,7 @@
 # docker run --name go-quantstudio -p 8080:8080 paulfdunn/go-quantstudio
 # docker container rm go-quantstudio
 
-FROM golang:1.22-bullseye AS builder
+FROM golang:1.24-bullseye AS builder
 COPY ./ /go/src/go-quantstudio/
 WORKDIR /go/src/go-quantstudio/
 # The tests cannot be run when building for Artifact Repository, as the platform is different.

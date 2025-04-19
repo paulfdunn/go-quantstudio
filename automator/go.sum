@@ -19,8 +19,8 @@ github.com/mailru/easyjson v0.7.7 h1:UGYAvKxe3sBsEDzO8ZeWOSlIQfWFlxbzLZe7hwFURr0
 github.com/mailru/easyjson v0.7.7/go.mod h1:xzfreul335JAWq5oZzymOObrkdz5UnU4kGfJJLY9Nlc=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde h1:x0TT0RDC7UhAVbbWWBzr41ElhJx5tXPWkIHA2HWPRuw=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
-github.com/paulfdunn/go-helper/logh v1.8.3 h1:OliprqLG8ZufM5bs+Ts4IfAG/4ZLm7u+Npp1XBMPfv8=
-github.com/paulfdunn/go-helper/logh v1.8.3/go.mod h1:kQ9ecllPxtj+ipymHiRZ1aKRQCjSQn/eoQlwy1hK4qQ=
+github.com/paulfdunn/go-helper/logh/v2 v2.0.5 h1:7vvlPGya48Iv93k+CbLXiJoqfcTBlvsFTph16pqbfMI=
+github.com/paulfdunn/go-helper/logh/v2 v2.0.5/go.mod h1:aIlue2/ZKW4Fyelbf1fOtVeL08+BzoCx/8QsI6N48uk=
 github.com/paulfdunn/go-quantstudio v0.0.0-20240323024008-ce1fe4b66498 h1:gpJ+khPonm8p9rkmn/723W3J1LgElnD2xgYPAJJnRPA=
 github.com/paulfdunn/go-quantstudio v0.0.0-20240323024008-ce1fe4b66498/go.mod h1:B+H8Huw29Zga5BrJIpNluEHv9pOhA5gMFKflJTaEyMQ=
 golang.org/x/sys v0.6.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>go-quantstudio 2MA</title>
+		<script src="/plotly-2.16.1.min.js"></script>
+		<script src="/chart2MA/chart2MA.js"></script>
+		<script src="/script.js"></script>
+		<style>
+				:root {
+					--chartWidth: 1200px;
+				}
+				#symbol {
+					width: 4em;
+					/* margin-left: 1em; */
+					margin-right: 1em;
+				}
+				#maLengthLF {
+					width: 3em;
+					/* margin-left: 1em; */
+					margin-right: 1em;
+				}
+				#maLengthHF {
+					width: 3em;
+					/* margin-left: 1em; */
+					margin-right: 1em;
+				}
+				#process {
+					margin-left: 1em;
+					margin-right: 1em;
+				}
+				#downloadData{
+					margin-left: 1em;
+					margin-right: 1em;
+				}
+				#symbols {
+					overflow-y: scroll;
+					resize: none;
+					width: 20em;
+					height: 4em;
+				}
+				#chart2MAChart {
+					width: var(--chartWidth);
+					height: 800px;
+				}
+				#tradeHistory {
+  					width: var(--chartWidth);
+  					height: 20em;
+				}
+		</style>
+	</head>
+	<body>
+		<h3>go-quantstudio 2MA</h3>
+		<div id="chart2MA">
+			Symbol: <input id="symbol" value="qqq" >
+			MaLengthLF: <input id="maLengthLF" value="80">
+			MaLengthHF: <input id="maLengthHF" value="20">
+			<button id="process">Process</button>
+			<button id="downloadData">Download Data</button>
+			<label for="symbols">Loaded symbols</label>
+			<textarea readonly id="symbols" name="symbols"></textarea>
+			<hr />
+			<div id="chart2MAChart"></div>
+			<div id="history">
+				<p><label for="tradeHistory">Trade history:</label></p>
+				<textarea readonly id="tradeHistory" name="tradeHistory"></textarea>
+				<p>* Trade history prices are adjusted open/close, while the chart shows normalized prices.
+					Trades happen the day after the signal change. The Trade signal is a straight line from
+					the buy level to sell level, or vice versa. When prices are near the top/bottom of the chart
+					it may appear the trade is happening on the wrong day since the Trade plot is NOT vertical,
+					but slightly diagonal as it changes value.
+				</p>
+			</div>
+		</div>
+	</body>
+	<script>
+		var inputSymbol = document.getElementById("symbol");
+		inputSymbol.addEventListener("keypress", function(event) {
+		  if (event.key === "Enter") {
+			event.preventDefault();
+			document.getElementById("process").click();
+		  }
+		});
+
+		var inputMALength = document.getElementById("maLengthLF");
+		inputMALength.addEventListener("keypress", function(event) {
+		  if (event.key === "Enter") {
+			event.preventDefault();
+			document.getElementById("process").click();
+		  }
+		});
+
+		var inputMASplit = document.getElementById("maLengthHF");
+		inputMASplit.addEventListener("keypress", function(event) {
+		  if (event.key === "Enter") {
+			event.preventDefault();
+			document.getElementById("process").click();
+		  }
+		});
+
+		loadSymbols();
+	</script>
+</html>
