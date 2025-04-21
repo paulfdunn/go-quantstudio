@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>go-quantstudio CvO</title>
+		<title>go-quantstudio 2EMA</title>
 		<script src="/plotly-2.16.1.min.js"></script>
-		<script src="/chartCvO/chartCvO.js"></script>
+		<script src="/chart2EMA/chart2EMA.js"></script>
 		<script src="/script.js"></script>
 		<style>
 				:root {
@@ -14,12 +14,12 @@
 					/* margin-left: 1em; */
 					margin-right: 1em;
 				}
-				#maLength {
+				#maLengthLF {
 					width: 3em;
 					/* margin-left: 1em; */
 					margin-right: 1em;
 				}
-				#maSplit {
+				#maLengthHF {
 					width: 3em;
 					/* margin-left: 1em; */
 					margin-right: 1em;
@@ -38,7 +38,7 @@
 					width: 20em;
 					height: 4em;
 				}
-				#chartCvOChart {
+				#chart2EMAChart {
 					width: var(--chartWidth);
 					height: 800px;
 				}
@@ -49,19 +49,19 @@
 		</style>
 	</head>
 	<body>
-		<h3>go-quantstudio CvO</h3>
-		<p>Trade using the sum of the slopes of the open and closed gain
+		<h3>go-quantstudio 2EMA</h3>
+		<p>Trade when the high frequency moving average is greater than the low frequency moving average
 		</p>
-		<div id="chartCvO">
+		<div id="chart2EMA">
 			Symbol: <input id="symbol" value="qqq" >
-			MaLength: <input id="maLength" value="100">
-			MaSplit: <input id="maSplit" value="0.04">
+			MaLengthLF: <input id="maLengthLF" value="150">
+			MaLengthHF: <input id="maLengthHF" value="100">
 			<button id="process">Process</button>
 			<button id="downloadData">Download Data</button>
 			<label for="symbols">Loaded symbols</label>
 			<textarea readonly id="symbols" name="symbols"></textarea>
 			<hr />
-			<div id="chartCvOChart"></div>
+			<div id="chart2EMAChart"></div>
 			<div id="history">
 				<p><label for="tradeHistory">Trade history:</label></p>
 				<textarea readonly id="tradeHistory" name="tradeHistory"></textarea>
@@ -83,7 +83,7 @@
 		  }
 		});
 
-		var inputMALength = document.getElementById("maLength");
+		var inputMALength = document.getElementById("maLengthLF");
 		inputMALength.addEventListener("keypress", function(event) {
 		  if (event.key === "Enter") {
 			event.preventDefault();
@@ -91,7 +91,7 @@
 		  }
 		});
 
-		var inputMASplit = document.getElementById("maSplit");
+		var inputMASplit = document.getElementById("maLengthHF");
 		inputMASplit.addEventListener("keypress", function(event) {
 		  if (event.key === "Enter") {
 			event.preventDefault();

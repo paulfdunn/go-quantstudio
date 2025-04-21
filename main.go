@@ -20,6 +20,7 @@ import (
 	"github.com/paulfdunn/go-quantstudio/downloader"
 	"github.com/paulfdunn/go-quantstudio/downloader/financeYahooChart"
 	"github.com/paulfdunn/go-quantstudio/quant"
+	"github.com/paulfdunn/go-quantstudio/quant/quant2EMA"
 	"github.com/paulfdunn/go-quantstudio/quant/quant2MA"
 	"github.com/paulfdunn/go-quantstudio/quant/quantCvO"
 	"github.com/paulfdunn/go-quantstudio/quant/quantMAH"
@@ -40,11 +41,12 @@ var (
 	dataDirectorySuffix = filepath.Join(`tmp`, appName)
 	dataDirectory       string
 
-	dlGroupChanCvO chan *downloader.Group
-	dlGroupChanMA  chan *downloader.Group
-	dlGroupChanDir chan *downloader.Group
+	dlGroupChanCvO  chan *downloader.Group
+	dlGroupChanMA   chan *downloader.Group
+	dlGroupChan2EMA chan *downloader.Group
+	dlGroupChan2MA  chan *downloader.Group
 
-	//go:embed assets/chartCvO assets/chartMAH assets/chart2MA assets/index.html assets/plotly-2.16.1.min.js assets/script.js
+	//go:embed assets/chartCvO assets/chartMAH assets/chart2EMA assets/chart2MA assets/index.html assets/plotly-2.16.1.min.js assets/script.js
 	staticFS embed.FS
 )
 
@@ -101,11 +103,13 @@ func Init() {
 	quant.Init(appName)
 	quantCvO.Init(appName)
 	quantMAH.Init(appName)
+	quant2EMA.Init(appName)
 	quant2MA.Init(appName)
 
 	dlGroupChanCvO = make(chan *downloader.Group, 1)
 	dlGroupChanMA = make(chan *downloader.Group, 1)
-	dlGroupChanDir = make(chan *downloader.Group, 1)
+	dlGroupChan2EMA = make(chan *downloader.Group, 1)
+	dlGroupChan2MA = make(chan *downloader.Group, 1)
 }
 
 func main() {
@@ -124,12 +128,13 @@ func main() {
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
 	http.HandleFunc("/plotly-cvo", quantCvO.WrappedPlotlyHandler(dlGroupChanCvO, tradingSymbols))
 	http.HandleFunc("/plotly-ma", quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols))
-	http.HandleFunc("/plotly-mf", quant2MA.WrappedPlotlyHandler(dlGroupChanDir, tradingSymbols))
-	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir))
+	http.HandleFunc("/plotly-2ema", quant2EMA.WrappedPlotlyHandler(dlGroupChan2EMA, tradingSymbols))
+	http.HandleFunc("/plotly-2ma", quant2MA.WrappedPlotlyHandler(dlGroupChan2MA, tradingSymbols))
+	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChan2EMA, dlGroupChan2MA))
 	http.HandleFunc("/symbols", wrappedSymbols(tradingSymbols))
 
 	// Download data and put it in channels
-	err = downloadYahooData(*liveDataPtr, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir)
+	err = downloadYahooData(*liveDataPtr, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChan2EMA, dlGroupChan2MA)
 	if err != nil {
 		lpf(logh.Error, "calling downloadYahooData: %+v", err)
 		lp(logh.Error, "exiting...")
@@ -153,14 +158,18 @@ func main() {
 	reqMAH := httptest.NewRequest(http.MethodGet, targetMAH, nil)
 	wMAH := httptest.NewRecorder()
 	quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols)(wMAH, reqMAH)
-	targetDir := fmt.Sprintf("/plotly-ma?symbol=%s&maLengthLF=%d&maLengthHF=%d", tradingSymbols[0], defs.MALengthDefaultLF, defs.MALengthDefaultHF)
-	reqDir := httptest.NewRequest(http.MethodGet, targetDir, nil)
-	wDir := httptest.NewRecorder()
-	quant2MA.WrappedPlotlyHandler(dlGroupChanDir, tradingSymbols)(wDir, reqDir)
+	target2EMA := fmt.Sprintf("/plotly-2ema?symbol=%s&maLengthLF=%d&maLengthHF=%d", tradingSymbols[0], defs.EMA2LengthDefaultLF, defs.EMA2LengthDefaultHF)
+	req2EMA := httptest.NewRequest(http.MethodGet, target2EMA, nil)
+	w2EMA := httptest.NewRecorder()
+	quant2EMA.WrappedPlotlyHandler(dlGroupChan2EMA, tradingSymbols)(w2EMA, req2EMA)
+	target2MA := fmt.Sprintf("/plotly-2ma?symbol=%s&maLengthLF=%d&maLengthHF=%d", tradingSymbols[0], defs.MA2LengthDefaultLF, defs.MA2LengthDefaultHF)
+	req2MA := httptest.NewRequest(http.MethodGet, target2MA, nil)
+	w2MA := httptest.NewRecorder()
+	quant2MA.WrappedPlotlyHandler(dlGroupChan2MA, tradingSymbols)(w2MA, req2MA)
 	// Download again (livedata is false, so this is loading the data downloaded above from file)
 	// as the above call consumed the data from the channel and the registered
 	// handler will not have data without calling downloadYahooData again.
-	if err := downloadYahooData(false, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir); err != nil {
+	if err := downloadYahooData(false, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChan2EMA, dlGroupChan2MA); err != nil {
 		log.Fatal(err)
 	}
 
@@ -179,7 +188,8 @@ func main() {
 }
 
 func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []string,
-	dlGroupChanCvO chan *downloader.Group, dlGroupChanMA chan *downloader.Group, dlGroupChanDir chan *downloader.Group) error {
+	dlGroupChanCvO chan *downloader.Group, dlGroupChanMA chan *downloader.Group,
+	dlGroupChan2EMA chan *downloader.Group, dlGroupChan2MA chan *downloader.Group) error {
 	allSymbols := tradingSymbols
 	if defs.AnalysisSymbols != "" {
 		allSymbols = append(allSymbols, strings.Split(defs.AnalysisSymbols, ",")...)
@@ -189,7 +199,8 @@ func downloadYahooData(liveData bool, dataFilepath string, tradingSymbols []stri
 	lp(logh.Info, "Downloading complete")
 	dlGroupChanCvO <- group
 	dlGroupChanMA <- group
-	dlGroupChanDir <- group
+	dlGroupChan2EMA <- group
+	dlGroupChan2MA <- group
 	if err != nil {
 		lpf(logh.Error, "calling NewGroup: %+v", err)
 		return err
@@ -203,8 +214,12 @@ func runMARange(tradingSymbols []string) {
 	// dlGroup := <-dlGroupChanMA
 	// maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200}
 	// maSplit := []float64{0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22}
-	maLength := []int{50, 60, 70, 80, 90, 100, 110, 120}
-	maSplit := []int{10, 12, 14, 16, 18, 20, 25, 30}
+	// for 2EMA
+	maLength := []int{120, 130, 140, 150, 170, 180}
+	maSplit := []int{50, 75, 100, 125, 150}
+	// for 2MA
+	// maLength := []int{120, 130, 140, 150, 160, 170, 200}
+	// maSplit := []int{30, 35, 40, 45, 50, 60}
 	results := make([][]string, len(maLength))
 	for i := range maLength {
 		splitResults := make([]float64, len(maSplit))
@@ -214,7 +229,8 @@ func runMARange(tradingSymbols []string) {
 			symbolResults := 1.0
 			// qg := quantCvO.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
 			// qg := quantMAH.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
-			qg := quant2MA.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
+			qg := quant2EMA.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
+			// qg := quant2MA.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
 			for _, iss := range qg.Issues {
 				symbolResults *= iss.QuantsetAsColumns.Results.AnnualizedGain
 			}
@@ -234,7 +250,7 @@ func wrappedDownloadYahooData(dataFilepath string, tradingSymbols []string,
 	dlGroupChanCvO chan *downloader.Group, dlGroupChanMA chan *downloader.Group,
 	dlGroupChanDir chan *downloader.Group) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := downloadYahooData(true, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanDir)
+		err := downloadYahooData(true, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChan2EMA, dlGroupChan2MA)
 		if err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
