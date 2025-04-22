@@ -6,17 +6,17 @@ const (
 
 	// CHANGE DEFAULTS HERE AND IN HTML FILES.
 	// Length of the MA in data points.
-	CvOLengthDefault    = 100
-	MALengthDefault     = 150
+	CvOLengthDefault    = 250
+	MAHLengthDefault    = 150
 	DirLengthDefault    = 200
-	EMA2LengthDefaultLF = 150
-	EMA2LengthDefaultHF = 100
+	EMA2LengthDefaultLF = 140
+	EMA2LengthDefaultHF = 110
 	MA2LengthDefaultLF  = 150
 	MA2LengthDefaultHF  = 40
 	// The moving average is split +/- this amount; I.E. 0.05 means a buy at 5% above the MA
 	// and sell at 5% below the MA.
 	CvOSplitDefault = 0.04
-	MASplitDefault  = 0.04
+	MAHSplitDefault = 0.04
 	DirSplitDefault = 0.05
 	//
 	// Symbols being added for use in analysis. These symbols will always be downloaded, but only

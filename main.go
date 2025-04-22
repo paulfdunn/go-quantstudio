@@ -154,7 +154,7 @@ func main() {
 	reqCvO := httptest.NewRequest(http.MethodGet, targetCvO, nil)
 	wCvO := httptest.NewRecorder()
 	quantCvO.WrappedPlotlyHandler(dlGroupChanCvO, tradingSymbols)(wCvO, reqCvO)
-	targetMAH := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.MALengthDefault, defs.MASplitDefault)
+	targetMAH := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.MAHLengthDefault, defs.MAHSplitDefault)
 	reqMAH := httptest.NewRequest(http.MethodGet, targetMAH, nil)
 	wMAH := httptest.NewRecorder()
 	quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols)(wMAH, reqMAH)
@@ -215,8 +215,8 @@ func runMARange(tradingSymbols []string) {
 	// maLength := []int{50, 60, 70, 80, 90, 100, 120, 140, 150, 160, 180, 200, 220, 240, 260, 280, 300, 350, 400, 450, 500, 600, 700, 800, 900, 1000, 1200}
 	// maSplit := []float64{0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.22}
 	// for EMA2
-	maLength := []int{120, 130, 140, 150, 170, 180}
-	maSplit := []int{50, 75, 100, 125, 150}
+	maLength := []int{120, 130, 140, 150, 160, 170}
+	maSplit := []int{80, 90, 100, 110, 120}
 	// for MA2
 	// maLength := []int{120, 130, 140, 150, 160, 170, 200}
 	// maSplit := []int{30, 35, 40, 45, 50, 60}
