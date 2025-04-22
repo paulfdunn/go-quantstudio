@@ -111,12 +111,12 @@ func EMA(length int, biasStart bool, dataSlices ...[]float64) []float64 {
 	dataPoints := len(dataSlices[0])
 	out := make([]float64, dataPoints)
 	weights := 0.0
-	for i := 0; i <= length; i++ {
+	for i := 0; i < length; i++ {
 		weights += math.Exp(3.0 * float64(-i) / float64(length))
 	}
 	for i := range summedData {
 		sum := 0.0
-		for j := i; j >= i-length; j-- {
+		for j := i; j > i-length; j-- {
 			if j < 0 {
 				break
 			}

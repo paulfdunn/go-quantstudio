@@ -1,4 +1,4 @@
-package quant2MA
+package quantEMA2
 
 import (
 	"encoding/json"
@@ -22,10 +22,10 @@ type Group struct {
 
 type Issue struct {
 	DownloaderIssue   *downloader.Issue
-	QuantsetAsColumns Quant2MA
+	QuantsetAsColumns QuantEMA2
 }
 
-type Quant2MA struct {
+type QuantEMA2 struct {
 	PriceNormalizedClose []float64
 	PriceNormalizedHigh  []float64
 	PriceNormalizedLow   []float64
@@ -85,9 +85,9 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int) Issue {
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjHigh)
 	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjLow)
 	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjOpen)
-	priceMALow := quant.MA(maLengthLF, true, issDAC.AdjOpen, issDAC.AdjClose)
+	priceMALow := quant.EMA(maLengthLF, true, issDAC.AdjOpen, issDAC.AdjClose)
 	priceMALow = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], priceMALow)
-	priceMAHigh := quant.MA(maLengthHF, true, issDAC.AdjOpen, issDAC.AdjClose)
+	priceMAHigh := quant.EMA(maLengthHF, true, issDAC.AdjOpen, issDAC.AdjClose)
 	priceMAHigh = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], priceMAHigh)
 	tradeMA := quant.TradeOnPrice(maLengthLF, priceMAHigh, priceMALow, priceMALow)
 	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLengthLF, tradeMA, *iss)
@@ -95,7 +95,7 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int) Issue {
 	results := quant.Results{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
 		Trade: tradeMA, TradeGainVsTime: tradeGainVsTime}
 	return Issue{DownloaderIssue: iss,
-		QuantsetAsColumns: Quant2MA{PriceNormalizedClose: priceNormalizedClose,
+		QuantsetAsColumns: QuantEMA2{PriceNormalizedClose: priceNormalizedClose,
 			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,
 			PriceMAHigh:         priceMAHigh, PriceMALow: priceMALow,

@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<title>go-quantstudio 2EMA</title>
+		<title>go-quantstudio EMA2</title>
 		<script src="/plotly-2.16.1.min.js"></script>
-		<script src="/chart2EMA/chart2EMA.js"></script>
+		<script src="/chartEMA2/chartEMA2.js"></script>
 		<script src="/script.js"></script>
 		<style>
 				:root {
@@ -38,7 +38,7 @@
 					width: 20em;
 					height: 4em;
 				}
-				#chart2EMAChart {
+				#chartEMA2Chart {
 					width: var(--chartWidth);
 					height: 800px;
 				}
@@ -49,10 +49,10 @@
 		</style>
 	</head>
 	<body>
-		<h3>go-quantstudio 2EMA</h3>
+		<h3>go-quantstudio EMA2</h3>
 		<p>Trade when the high frequency moving average is greater than the low frequency moving average
 		</p>
-		<div id="chart2EMA">
+		<div id="chartEMA2">
 			Symbol: <input id="symbol" value="qqq" >
 			MaLengthLF: <input id="maLengthLF" value="150">
 			MaLengthHF: <input id="maLengthHF" value="100">
@@ -61,7 +61,7 @@
 			<label for="symbols">Loaded symbols</label>
 			<textarea readonly id="symbols" name="symbols"></textarea>
 			<hr />
-			<div id="chart2EMAChart"></div>
+			<div id="chartEMA2Chart"></div>
 			<div id="history">
 				<p><label for="tradeHistory">Trade history:</label></p>
 				<textarea readonly id="tradeHistory" name="tradeHistory"></textarea>
