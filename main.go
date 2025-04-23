@@ -130,7 +130,7 @@ func main() {
 	http.HandleFunc("/plotly-ma", quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols))
 	http.HandleFunc("/plotly-2ema", quantEMA2.WrappedPlotlyHandler(dlGroupChanEMA2, tradingSymbols))
 	http.HandleFunc("/plotly-2ma", quantMA2.WrappedPlotlyHandler(dlGroupChanMA2, tradingSymbols))
-	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanEMA2, dlGroupChanMA2))
+	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanEMA2, dlGroupChanMA2))
 	http.HandleFunc("/symbols", wrappedSymbols(tradingSymbols))
 
 	// Download data and put it in channels
@@ -248,7 +248,7 @@ func runMARange(tradingSymbols []string) {
 
 func wrappedDownloadYahooData(dataFilepath string, tradingSymbols []string,
 	dlGroupChanCvO chan *downloader.Group, dlGroupChanMA chan *downloader.Group,
-	dlGroupChanDir chan *downloader.Group) http.HandlerFunc {
+	dlGroupChanEMA2 chan *downloader.Group, dlGroupChanMA2 chan *downloader.Group) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := downloadYahooData(true, dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanEMA2, dlGroupChanMA2)
 		if err != nil {
