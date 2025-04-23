@@ -2,7 +2,7 @@ async function updateChartDir() {
     let symbol = document.getElementById('symbol').value;
     let maLengthLF = document.getElementById('maLengthLF').value;
     let maLengthHF = document.getElementById('maLengthHF').value;
-    let response = await fetch('/plotly-2ma?symbol=' + symbol + '&maLengthLF=' + maLengthLF+ '&maLengthHF=' + maLengthHF);
+    let response = await fetch('/plotly-ma2?symbol=' + symbol + '&maLengthLF=' + maLengthLF+ '&maLengthHF=' + maLengthHF);
     if (response.status >= 400 && response.status < 600) {
         Plotly.deleteTraces('chartMA2Chart', [0,1,2,3,4,5]);
         tradeHistory.innerHTML = "Server replied with error; likely an invalid symbol.";

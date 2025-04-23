@@ -57,6 +57,7 @@ func AnnualizedGain(totalGain float64, startDate time.Time, endDate time.Time) f
 }
 
 // Differentiate will take the backwards difference of the input slice.
+// The first point is set to 0.
 func Differentiate(input []float64) []float64 {
 	out := make([]float64, len(input))
 	out[0] = 0
