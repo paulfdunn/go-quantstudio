@@ -56,12 +56,55 @@ func AnnualizedGain(totalGain float64, startDate time.Time, endDate time.Time) f
 	return math.Pow(totalGain, 1/years)
 }
 
+// Differentiate will take the backwards difference of the input slice.
 func Differentiate(input []float64) []float64 {
 	out := make([]float64, len(input))
 	out[0] = 0
 	for i := 1; i < len(input); i++ {
 		out[i] = input[i] - input[i-1]
 	}
+	return out
+}
+
+// EMA is the exponential moving average of the dataSlices.
+// If biasStart==true the initial points of the series are filled with the value
+// of the MA on the first point after length points.
+func EMA(length int, biasStart bool, dataSlices ...[]float64) []float64 {
+	if err := SlicesAreEqualLength(dataSlices...); err != nil {
+		return nil
+	}
+
+	summedData := SumSlices(dataSlices...)
+	slices := float64(len(dataSlices))
+	firstFullCycle := 0.0
+	dataPoints := len(dataSlices[0])
+	out := make([]float64, dataPoints)
+	weights := make([]float64, length)
+	totalWeight := 0.0
+	for i := 0; i < length; i++ {
+		weights[i] = math.Exp(3.0 * float64(-i) / float64(length))
+		totalWeight += weights[i]
+	}
+	for i := range summedData {
+		sum := 0.0
+		for j := 0; j < length; j++ {
+			if i-j < 0 {
+				break
+			}
+			sum += weights[j] * summedData[i-j] / slices
+		}
+		out[i] = sum / totalWeight
+		if i == length {
+			firstFullCycle = out[i]
+		}
+	}
+
+	if biasStart {
+		for i := 0; i < length; i++ {
+			out[i] = firstFullCycle
+		}
+	}
+
 	return out
 }
 
@@ -92,46 +135,6 @@ func MarketOpenGain(open []float64, close []float64) []float64 {
 	out[0] = 1.0
 	for i := 1; i < len(open); i++ {
 		out[i] = out[i-1] * (close[i] / open[i])
-	}
-
-	return out
-}
-
-// EMA is the exponential moving average of the dataSlices.
-// If biasStart==true the initial points of the series are filled with the value
-// of the MA on the first point after length points.
-func EMA(length int, biasStart bool, dataSlices ...[]float64) []float64 {
-	if err := SlicesAreEqualLength(dataSlices...); err != nil {
-		return nil
-	}
-
-	summedData := SumSlices(dataSlices...)
-	slices := float64(len(dataSlices))
-	firstFullCycle := 0.0
-	dataPoints := len(dataSlices[0])
-	out := make([]float64, dataPoints)
-	weights := 0.0
-	for i := 0; i < length; i++ {
-		weights += math.Exp(3.0 * float64(-i) / float64(length))
-	}
-	for i := range summedData {
-		sum := 0.0
-		for j := i; j > i-length; j-- {
-			if j < 0 {
-				break
-			}
-			sum += math.Exp(3.0*float64(-(i-j))/float64(length)) * summedData[j] / slices
-		}
-		out[i] = sum / weights
-		if i == length {
-			firstFullCycle = out[i]
-		}
-	}
-
-	if biasStart {
-		for i := 0; i < length; i++ {
-			out[i] = firstFullCycle
-		}
 	}
 
 	return out
