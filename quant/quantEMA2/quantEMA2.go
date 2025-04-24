@@ -85,9 +85,17 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int) Issue {
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjHigh)
 	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjLow)
 	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjOpen)
-	priceMALow := quant.EMA(maLengthLF, true, issDAC.AdjOpen, issDAC.AdjClose)
+	priceMALow, err := quant.EMA(maLengthLF, true, issDAC.AdjOpen, issDAC.AdjClose)
+	if err != nil {
+		lpf(logh.Error, "%+v", err)
+		return Issue{}
+	}
 	priceMALow = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], priceMALow)
-	priceMAHigh := quant.EMA(maLengthHF, true, issDAC.AdjOpen, issDAC.AdjClose)
+	priceMAHigh, err := quant.EMA(maLengthHF, true, issDAC.AdjOpen, issDAC.AdjClose)
+	if err != nil {
+		lpf(logh.Error, "%+v", err)
+		return Issue{}
+	}
 	priceMAHigh = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], priceMAHigh)
 	tradeMA := quant.TradeOnPrice(maLengthLF, priceMAHigh, priceMALow, priceMALow)
 	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLengthLF, tradeMA, *iss)

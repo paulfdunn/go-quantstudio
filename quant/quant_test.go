@@ -59,7 +59,7 @@ func Example_ema_1() {
 	f2 := make([]float64, 40)
 	f2 = OffsetSlice(1, f2)
 	f3 := append(f1, f2...)
-	result3 := EMA(10, false, f3)
+	result3, _ := EMA(10, false, f3)
 	for _, v := range result3 {
 		fmt.Printf("%4.3f, ", v)
 	}
@@ -71,7 +71,7 @@ func Example_ema_1() {
 func Example_ema_2() {
 	f2 := make([]float64, 40)
 	f2 = OffsetSlice(1, f2)
-	result2 := EMA(10, false, f2)
+	result2, _ := EMA(10, false, f2)
 	for _, v := range result2 {
 		fmt.Printf("%4.3f, ", v)
 	}
@@ -84,7 +84,7 @@ func Example_ema_0() {
 	f1 := make([]float64, 10)
 	f2 := []float64{1.0}
 	f3 := append(append(append(f1, f2...), f1...), f1...)
-	result3 := EMA(10, false, f3)
+	result3, _ := EMA(10, false, f3)
 	for _, v := range result3 {
 		fmt.Printf("%4.3f, ", v)
 	}
@@ -96,7 +96,7 @@ func Example_ema_0() {
 func Example_marketClosedGain_1() {
 	close := []float64{1, 1, 1, 1, 1, 1}
 	open := []float64{1, 1, 1, 1, 1, 1}
-	result := MarketClosedGain(open, close)
+	result, _ := MarketClosedGain(open, close)
 	fmt.Printf("%+v", result)
 
 	// Output:
@@ -106,7 +106,7 @@ func Example_marketClosedGain_1() {
 func Example_marketClosedGain_2() {
 	close := []float64{1, 1.1, 0.9090909090909091, 1, 1, 1}
 	open := []float64{1, 1, 1, 1, 1, 1}
-	result := MarketClosedGain(open, close)
+	result, _ := MarketClosedGain(open, close)
 	fmt.Printf("%+v", result)
 
 	// Output:
@@ -116,7 +116,7 @@ func Example_marketClosedGain_2() {
 func Example_marketOpenGain_1() {
 	close := []float64{1, 1, 1, 1, 1, 1}
 	open := []float64{1, 1, 1, 1, 1, 1}
-	result := MarketOpenGain(open, close)
+	result, _ := MarketOpenGain(open, close)
 	fmt.Printf("%+v", result)
 
 	// Output:
@@ -126,7 +126,7 @@ func Example_marketOpenGain_1() {
 func Example_marketOpenGain_2() {
 	close := []float64{1, 1.1, 0.9090909090909091, 1, 1, 1}
 	open := []float64{1, 1, 1, 1, 1, 1}
-	result := MarketOpenGain(open, close)
+	result, _ := MarketOpenGain(open, close)
 	fmt.Printf("%+v", result)
 
 	// Output:
@@ -136,12 +136,12 @@ func Example_marketOpenGain_2() {
 func Example_ma() {
 	f1 := []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
 	f2 := []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
-	result := MA(2, false, f1, f2)
+	result, _ := MA(2, false, f1, f2)
 	fmt.Printf("%+v\n", result)
 
 	f1 = []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
 	f2 = []float64{10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0}
-	result = MA(2, true, f1, f2)
+	result, _ = MA(2, true, f1, f2)
 	fmt.Printf("%+v\n", result)
 
 	// Output:
@@ -175,13 +175,13 @@ func Example_multiplySliceGated() {
 func Example_multiplySlices() {
 	f1 := []float64{1.0, 2.0, 3.0}
 	f2 := []float64{10.0, 20.0, 30.0}
-	result := MultiplySlices(f1, f2)
+	result, _ := MultiplySlices(f1, f2)
 	fmt.Printf("%+v\n", result)
 
 	f1 = []float64{1.0, 2.0, 3.0}
 	f2 = []float64{10.0, 20.0, 30.0}
 	f3 := []float64{100.0, 200.0, 300.0}
-	result = MultiplySlices(f1, f2, f3)
+	result, _ = MultiplySlices(f1, f2, f3)
 	fmt.Printf("%+v\n", result)
 
 	// Output:
@@ -226,20 +226,20 @@ func Example_slicesAreEqualLength() {
 func Example_sumSlices() {
 	f1 := []float64{1.0, 2.0, 3.0, 4.0}
 	f2 := []float64{10.0, 20.0, 30.0}
-	result := SumSlices(f1, f2)
+	result, _ := SumSlices(f1, f2)
 	if result != nil {
 		fmt.Printf("result was not nil but was supposed to be")
 	}
 
 	f1 = []float64{1.0, 2.0, 3.0}
 	f2 = []float64{10.0, 20.0, 30.0}
-	result = SumSlices(f1, f2)
+	result, _ = SumSlices(f1, f2)
 	fmt.Printf("%+v\n", result)
 
 	f1 = []float64{1.0, 2.0, 3.0}
 	f2 = []float64{10.0, 20.0, 30.0}
 	f3 := []float64{100.0, 200.0, 300.0}
-	result = SumSlices(f1, f2, f3)
+	result, _ = SumSlices(f1, f2, f3)
 	fmt.Printf("%+v\n", result)
 
 	// Output:

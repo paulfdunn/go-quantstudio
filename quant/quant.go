@@ -56,7 +56,7 @@ func AnnualizedGain(totalGain float64, startDate time.Time, endDate time.Time) f
 	return math.Pow(totalGain, 1/years)
 }
 
-// Differentiate will take the backwards difference of the input slice.
+// Differentiate will return the backwards difference of the input slice.
 // The first point is set to 0.
 func Differentiate(input []float64) []float64 {
 	out := make([]float64, len(input))
@@ -70,12 +70,17 @@ func Differentiate(input []float64) []float64 {
 // EMA is the exponential moving average of the dataSlices.
 // If biasStart==true the initial points of the series are filled with the value
 // of the MA on the first point after length points.
-func EMA(length int, biasStart bool, dataSlices ...[]float64) []float64 {
+func EMA(length int, biasStart bool, dataSlices ...[]float64) ([]float64, error) {
 	if err := SlicesAreEqualLength(dataSlices...); err != nil {
-		return nil
+		lpf(logh.Error, "%+v", err)
+		return nil, err
 	}
 
-	summedData := SumSlices(dataSlices...)
+	summedData, err := SumSlices(dataSlices...)
+	if err != nil {
+		lpf(logh.Error, "%+v", err)
+		return nil, err
+	}
 	slices := float64(len(dataSlices))
 	firstFullCycle := 0.0
 	dataPoints := len(dataSlices[0])
@@ -106,14 +111,15 @@ func EMA(length int, biasStart bool, dataSlices ...[]float64) []float64 {
 		}
 	}
 
-	return out
+	return out, nil
 }
 
 // MarketClosedGain will return the cummulative gain for an issue that is only held during market close.
 // I.E. you are constantly buying at close, selling at open.
-func MarketClosedGain(open []float64, close []float64) []float64 {
+func MarketClosedGain(open []float64, close []float64) ([]float64, error) {
 	if err := SlicesAreEqualLength(open, close); err != nil {
-		return nil
+		lpf(logh.Error, "%+v", err)
+		return nil, err
 	}
 
 	out := make([]float64, len(open))
@@ -122,14 +128,15 @@ func MarketClosedGain(open []float64, close []float64) []float64 {
 		out[i] = out[i-1] * (open[i] / close[i-1])
 	}
 
-	return out
+	return out, nil
 }
 
 // MarketOpenGain will return the cummulative gain for an issue that is only held during market open.
 // I.E. you are constantly buying at open, selling at close.
-func MarketOpenGain(open []float64, close []float64) []float64 {
+func MarketOpenGain(open []float64, close []float64) ([]float64, error) {
 	if err := SlicesAreEqualLength(open, close); err != nil {
-		return nil
+		lpf(logh.Error, "%+v", err)
+		return nil, err
 	}
 
 	out := make([]float64, len(open))
@@ -138,18 +145,23 @@ func MarketOpenGain(open []float64, close []float64) []float64 {
 		out[i] = out[i-1] * (close[i] / open[i])
 	}
 
-	return out
+	return out, nil
 }
 
 // MA is the moving average of the dataSlices.
 // If biasStart==true the initial points of the series are filled with the value
 // of the MA on the first point after length points.
-func MA(length int, biasStart bool, dataSlices ...[]float64) []float64 {
+func MA(length int, biasStart bool, dataSlices ...[]float64) ([]float64, error) {
 	if err := SlicesAreEqualLength(dataSlices...); err != nil {
-		return nil
+		lpf(logh.Error, "%+v", err)
+		return nil, err
 	}
 
-	summedData := SumSlices(dataSlices...)
+	summedData, err := SumSlices(dataSlices...)
+	if err != nil {
+		lpf(logh.Error, "%+v", err)
+		return nil, err
+	}
 	slices := float64(len(dataSlices))
 	firstFullCycle := 0.0
 	sum := 0.0
@@ -172,7 +184,7 @@ func MA(length int, biasStart bool, dataSlices ...[]float64) []float64 {
 		}
 	}
 
-	return out
+	return out, nil
 }
 
 // multiplySlice will multiply the input slice values by the provided scale factor
@@ -200,9 +212,10 @@ func MultiplySliceGated(scale float64, dataSlice []float64, gate []int, gateValu
 }
 
 // multiplySlices will perform a pointwise product of all inputs slices and return the resulting slice.
-func MultiplySlices(dataSlices ...[]float64) []float64 {
+func MultiplySlices(dataSlices ...[]float64) ([]float64, error) {
 	if err := SlicesAreEqualLength(dataSlices...); err != nil {
-		return nil
+		lpf(logh.Error, "%+v", err)
+		return nil, err
 	}
 
 	slices := len(dataSlices)
@@ -216,7 +229,7 @@ func MultiplySlices(dataSlices ...[]float64) []float64 {
 			out[dataIndex] *= dataSlices[sliceIndex][dataIndex]
 		}
 	}
-	return out
+	return out, nil
 }
 
 // offsetSlice will add an offset to all values in the input slice and return the resulting slice.
@@ -242,8 +255,7 @@ func SlicesAreEqualLength(dataSlices ...[]float64) error {
 	slices := len(dataSlices)
 	for i := 1; i < slices; i++ {
 		if len(dataSlices[i-1]) != len(dataSlices[i]) {
-			err := fmt.Errorf("slices are different lengths, processing stopped")
-			lpf(logh.Error, "%+v", err)
+			err := fmt.Errorf("slices are different lengths")
 			return err
 		}
 	}
@@ -251,9 +263,10 @@ func SlicesAreEqualLength(dataSlices ...[]float64) error {
 }
 
 // sumSlices will perform a pointwise sum of all inputs slices and return the resulting slice.
-func SumSlices(dataSlices ...[]float64) []float64 {
+func SumSlices(dataSlices ...[]float64) ([]float64, error) {
 	if err := SlicesAreEqualLength(dataSlices...); err != nil {
-		return nil
+		lpf(logh.Error, "%+v", err)
+		return nil, err
 	}
 
 	slices := len(dataSlices)
@@ -264,7 +277,7 @@ func SumSlices(dataSlices ...[]float64) []float64 {
 			out[dataIndex] += dataSlices[sliceIndex][dataIndex]
 		}
 	}
-	return out
+	return out, nil
 }
 
 // Trade delays delay number of points, then compares price to the buyLevel and sellLevel,
