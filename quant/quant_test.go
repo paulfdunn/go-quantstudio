@@ -165,7 +165,7 @@ func Example_multiplySliceGated() {
 	result := MultiplySliceGated(
 		2.0,
 		[]float64{1.0, 2.0, 3.0, 4.0, 5.0},
-		[]int{Buy, Sell, Sell, Buy, Buy}, Sell)
+		[]int{LongBuy, Close, Close, LongBuy, LongBuy}, Close)
 	fmt.Printf("%+v\n", result)
 
 	// Output:
@@ -248,9 +248,10 @@ func Example_sumSlices() {
 }
 
 func Example_tradeGain() {
-	// make columns line up by using sel instead of Sell, and trade____ instead of trade.
-	sel := Sell
-	trade____ := []int{sel, sel, sel, Buy, Buy, Buy, sel, sel}
+	// make columns line up by using lby instead of LongBuy, cls instead of Close, and trade____ instead of trade.
+	lby := LongBuy
+	cls := Close
+	trade____ := []int{cls, cls, cls, lby, lby, lby, cls, cls}
 	close := []float64{1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0}
 	openn := []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.0, 2.0}
 	issue := downloader.Issue{}
@@ -269,11 +270,11 @@ func Example_tradeGain() {
 	_, gain, tradeG := TradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 
-	trade____ = []int{sel, sel, sel, sel, Buy, Buy, Buy, sel}
+	trade____ = []int{cls, cls, cls, cls, lby, lby, lby, cls}
 	_, gain, tradeG = TradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 
-	trade____ = []int{sel, sel, sel, sel, sel, Buy, Buy, Buy}
+	trade____ = []int{cls, cls, cls, cls, cls, lby, lby, lby}
 	_, gain, tradeG = TradeGain(2, trade____, issue)
 	fmt.Printf("%5.2f %+v\n", gain, tradeG)
 

@@ -20,8 +20,9 @@ type Results struct {
 const (
 	DateFormat = "2006-01-02"
 
-	Buy  = 1
-	Sell = 0
+	LongBuy   = 1
+	Close     = 0
+	ShortSell = -1
 )
 
 var (
@@ -280,15 +281,18 @@ func SumSlices(dataSlices ...[]float64) ([]float64, error) {
 	return out, nil
 }
 
-// TradeGain takes in input slice trade with values Buy/Sell, and after delay number of points,
-// applies the Buy/Sell signals to dlIssue to proces a tradeHistory, gain (total gain), and
+// TradeGain takes in input slice trade with values [LongBuy, Close], and after delay number of points,
+// applies the [LongBuy, Close] signals to dlIssue to proces a tradeHistory, gain (total gain), and
 // tradeGain (accumulated gain/loss at each point).
 func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory string, gain float64, tradeGain []float64) {
 	seriesLen := len(dlIssue.DatasetAsColumns.AdjOpen)
+	// tradeGain is the product of all daily changes in Issue price while a trades are open. This is useful
+	// for graphing the progression of gains.
 	tradeGain = make([]float64, seriesLen)
+	// gain is the product of all trade gains; where gain is sale_price/purchase_price.
+	// This will be slightly different than tradeGain due to floating point errors.
 	gain = 1.0
-	var buyPrice float64
-	var textOut string
+	var longBuyPrice float64
 	fd := dlIssue.DatasetAsColumns.Date[0].Format(DateFormat)
 	ld := dlIssue.DatasetAsColumns.Date[len(dlIssue.DatasetAsColumns.Date)-1].Format(DateFormat)
 	tradeHistory = fmt.Sprintf("first trading day: %s, last trading day: %s\n", fd, ld)
@@ -300,46 +304,40 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 		}
 
 		switch {
-		case trade[i-1] == Sell && trade[i] == Buy:
+		case trade[i-1] == Close && trade[i] == LongBuy:
 			tradeGain[i] = tradeGain[i-1]
 			if i == seriesLen-1 {
-				textOut = fmt.Sprintf("symbol: %s, date: %s, buyPrice: %8.2f **** TRADE TOMORROW ****",
-					dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), buyPrice)
-				lpf(logh.Info, "%s", textOut)
+				tradeHistory += fmt.Sprintf("symbol: %s, date: %s **** LONG BUY TOMORROW ****",
+					dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
 				break
 			}
-			buyPrice = dlIssue.DatasetAsColumns.AdjOpen[i+1]
-			textOut = fmt.Sprintf("symbol: %s, date: %s, buyPrice: %8.2f, ",
-				dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), buyPrice)
-		case trade[i-1] == Buy && trade[i] == Buy:
+			longBuyPrice = dlIssue.DatasetAsColumns.AdjOpen[i+1]
+			tradeHistory += fmt.Sprintf("symbol: %s, date: %s, long buy price: %8.2f, ",
+				dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), longBuyPrice)
+		case trade[i-1] == LongBuy && trade[i] == LongBuy:
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
 			if i == seriesLen-1 {
-				textOut += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
-				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / buyPrice
+				tradeHistory += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
+				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / longBuyPrice
 				gain *= thisGain
-				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f (TRADE STILL OPEN)", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
-				tradeHistory += fmt.Sprintf("%s\n", textOut)
-				lpf(logh.Info, "%s", textOut)
+				tradeHistory += fmt.Sprintf("long sell price: %8.2f, gain: %8.2f (TRADE STILL OPEN)\n", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
 			}
-		case (trade[i-1] == Buy && trade[i] == Sell):
+		case (trade[i-1] == LongBuy && trade[i] == Close):
 			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
-			textOut += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
+			tradeHistory += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
 			if i == seriesLen-1 {
-				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / buyPrice
+				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / longBuyPrice
 				gain *= thisGain
-				textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f **** TRADE TOMORROW ****", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
-				tradeHistory += fmt.Sprintf("%s\n", textOut)
-				lpf(logh.Info, "%s", textOut)
+				tradeHistory += fmt.Sprintf("long sell price: %8.2f, gain: %8.2f **** TRADE TOMORROW ****\n", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
 				break
 			}
 			tradeGain[i] = tradeGain[i] * dlIssue.DatasetAsColumns.AdjOpen[i+1] / dlIssue.DatasetAsColumns.AdjClose[i]
-			thisGain := dlIssue.DatasetAsColumns.AdjOpen[i+1] / buyPrice
+			thisGain := dlIssue.DatasetAsColumns.AdjOpen[i+1] / longBuyPrice
+			// Protect against logic errors by setting longBuyPrice to NaN when not in use.
+			longBuyPrice = math.NaN()
 			gain *= thisGain
-			textOut += fmt.Sprintf("sellPrice: %8.2f, gain: %8.2f", dlIssue.DatasetAsColumns.AdjOpen[i+1], thisGain)
-			tradeHistory += fmt.Sprintf("%s\n", textOut)
-			lpf(logh.Info, "%s", textOut)
-			textOut = ""
-		case trade[i-1] == Sell && trade[i] == Sell:
+			tradeHistory += fmt.Sprintf("long sell price: %8.2f, gain: %8.2f\n", dlIssue.DatasetAsColumns.AdjOpen[i+1], thisGain)
+		case trade[i-1] == Close && trade[i] == Close:
 			tradeGain[i] = tradeGain[i-1]
 		}
 	}
@@ -347,39 +345,41 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 	start := dlIssue.DatasetAsColumns.Date[delay]
 	end := dlIssue.DatasetAsColumns.Date[seriesLen-1]
 	bhGain := dlIssue.DatasetAsColumns.AdjClose[seriesLen-1] / dlIssue.DatasetAsColumns.AdjOpen[delay]
-	textOut = fmt.Sprintf("symbol: %s, buy/hold gain (annualized): %5.2f (%5.2f)",
+	tradeHistory += fmt.Sprintf("symbol: %s, buy/hold gain (annualized): %5.2f (%5.2f)\n",
 		dlIssue.Symbol, bhGain, AnnualizedGain(bhGain, start, end))
-	tradeHistory += fmt.Sprintf("%s\n", textOut)
-	lpf(logh.Info, textOut)
-	textOut = fmt.Sprintf("symbol: %s, total gain (annualized):    %5.2f (%5.2f)\n\n",
+	tradeHistory += fmt.Sprintf("symbol: %s, total gain (annualized):    %5.2f (%5.2f)\n\n",
 		dlIssue.Symbol, gain, AnnualizedGain(gain, start, end))
-	tradeHistory += fmt.Sprintf("%s\n", textOut)
-	lpf(logh.Info, textOut)
+	lpf(logh.Info, tradeHistory)
 
 	return tradeHistory, gain, tradeGain
 }
 
 // TradeOnPrice delays delay number of points, then compares price to the buyLevel and sellLevel,
-// and returns an output slice indicating Buy or Sell at
-// each point. Note that Sell is returned for the first delay number of points.
-func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) []int {
+// and returns an output slice indicating LongBuy or Close at
+// each point. Note that Close is returned for the first delay number of points.
+func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) ([]int, error) {
+	if err := SlicesAreEqualLength(price, buyLevel, sellLevel); err != nil {
+		lpf(logh.Error, "%+v", err)
+		return nil, err
+	}
+
 	out := make([]int, len(price))
 	for i := range price {
 		if i <= delay-1 {
-			out[i] = Sell
+			out[i] = Close
 			continue
 		}
 
 		switch {
 		case price[i] > buyLevel[i]:
-			out[i] = Buy
+			out[i] = LongBuy
 		case price[i] < sellLevel[i]:
-			out[i] = Sell
+			out[i] = Close
 		default:
 			out[i] = out[i-1]
 		}
 	}
-	return out
+	return out, nil
 }
 
 // tradeAddStop modifies the input trade signal to sell on stop.
@@ -391,7 +391,7 @@ func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) []int {
 // 	stopTriggeredIndex := 0
 // 	for i := 1; i < len(trade); i++ {
 // 		if stopTriggered {
-// 			tradeOut[i] = Sell
+// 			tradeOut[i] = Close
 // 			highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
 // 			if i > stopTriggeredIndex+stopLossDelay {
 // 				stopTriggered = false
@@ -400,11 +400,11 @@ func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) []int {
 // 		}
 
 // 		switch {
-// 		case trade[i-1] == Buy && trade[i] == Buy:
+// 		case trade[i-1] == LongBuy && trade[i] == LongBuy:
 // 			if dlIssue.DatasetAsColumns.AdjClose[i] > highCloseSinceBuy {
 // 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
 // 			}
-// 		case trade[i-1] == Sell && trade[i] == Buy:
+// 		case trade[i-1] == Close && trade[i] == LongBuy:
 // 			if i == len(trade)-1 {
 // 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
 // 			} else {
@@ -413,10 +413,10 @@ func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) []int {
 // 		}
 
 // 		tradeOut[i] = trade[i]
-// 		if trade[i] == Buy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
+// 		if trade[i] == LongBuy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
 // 			stopTriggered = true
 // 			stopTriggeredIndex = i
-// 			tradeOut[i] = Sell
+// 			tradeOut[i] = Close
 // 		}
 // 	}
 

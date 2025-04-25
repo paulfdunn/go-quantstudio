@@ -97,7 +97,11 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int) Issue {
 		return Issue{}
 	}
 	priceMAHigh = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], priceMAHigh)
-	tradeMA := quant.TradeOnPrice(maLengthLF, priceMAHigh, priceMALow, priceMALow)
+	tradeMA, err := quant.TradeOnPrice(maLengthLF, priceMAHigh, priceMALow, priceMALow)
+	if err != nil {
+		lpf(logh.Error, "%+v", err)
+		return Issue{}
+	}
 	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLengthLF, tradeMA, *iss)
 	annualizedGain := quant.AnnualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
 	results := quant.Results{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
@@ -269,7 +273,7 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"type":           "log",
 			},
 			"yaxis2": map[string]interface{}{
-				"title":          fmt.Sprintf("Trade (algorithm:moving average, buy=%d, sell=%d)", quant.Buy, quant.Sell),
+				"title":          fmt.Sprintf("Trade (algorithm:moving average, longBuy=%d, close=%d)", quant.LongBuy, quant.Close),
 				"autorange":      false,
 				"range":          []float64{0.0, 1.0},
 				"showspikes":     true,

@@ -153,9 +153,13 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	}
 	tradeLevel := make([]float64, len(slopeCvO))
 
-	tradeCvO := quant.TradeOnPrice(maLength, slopeCvO,
+	tradeCvO, err := quant.TradeOnPrice(maLength, slopeCvO,
 		quant.OffsetSlice(maSplit, tradeLevel),
 		quant.OffsetSlice(-maSplit, tradeLevel))
+	if err != nil {
+		lpf(logh.Error, "%+v", err)
+		return Issue{}
+	}
 
 	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLength, tradeCvO, *iss)
 	annualizedGain := quant.AnnualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
@@ -457,7 +461,7 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"type":           "log",
 			},
 			"yaxis2": map[string]interface{}{
-				"title":          fmt.Sprintf("Trade (algorithm:moving average, buy=%d, sell=%d)", quant.Buy, quant.Sell),
+				"title":          fmt.Sprintf("Trade (algorithm:moving average, longBuy=%d, close=%d)", quant.LongBuy, quant.Close),
 				"autorange":      false,
 				"range":          []float64{-1.0, 1.0},
 				"showspikes":     true,
