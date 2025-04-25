@@ -280,70 +280,6 @@ func SumSlices(dataSlices ...[]float64) ([]float64, error) {
 	return out, nil
 }
 
-// Trade delays delay number of points, then compares price to the buyLevel and sellLevel,
-// and returns an output slice indicating Buy or Sell at
-// each point. Note that Sell is returned for the first delay number of points.
-func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) []int {
-	out := make([]int, len(price))
-	for i := range price {
-		if i <= delay-1 {
-			out[i] = Sell
-			continue
-		}
-
-		switch {
-		case price[i] > buyLevel[i]:
-			out[i] = Buy
-		case price[i] < sellLevel[i]:
-			out[i] = Sell
-		default:
-			out[i] = out[i-1]
-		}
-	}
-	return out
-}
-
-// tradeAddStop modifies the input trade signal to sell on stop.
-// func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
-// 	tradeOut = make([]int, len(trade))
-
-// 	highCloseSinceBuy := 0.0
-// 	stopTriggered := false
-// 	stopTriggeredIndex := 0
-// 	for i := 1; i < len(trade); i++ {
-// 		if stopTriggered {
-// 			tradeOut[i] = Sell
-// 			highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-// 			if i > stopTriggeredIndex+stopLossDelay {
-// 				stopTriggered = false
-// 			}
-// 			continue
-// 		}
-
-// 		switch {
-// 		case trade[i-1] == Buy && trade[i] == Buy:
-// 			if dlIssue.DatasetAsColumns.AdjClose[i] > highCloseSinceBuy {
-// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-// 			}
-// 		case trade[i-1] == Sell && trade[i] == Buy:
-// 			if i == len(trade)-1 {
-// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-// 			} else {
-// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjOpen[i+1]
-// 			}
-// 		}
-
-// 		tradeOut[i] = trade[i]
-// 		if trade[i] == Buy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
-// 			stopTriggered = true
-// 			stopTriggeredIndex = i
-// 			tradeOut[i] = Sell
-// 		}
-// 	}
-
-// 	return tradeOut
-// }
-
 // TradeGain takes in input slice trade with values Buy/Sell, and after delay number of points,
 // applies the Buy/Sell signals to dlIssue to proces a tradeHistory, gain (total gain), and
 // tradeGain (accumulated gain/loss at each point).
@@ -422,3 +358,67 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 
 	return tradeHistory, gain, tradeGain
 }
+
+// TradeOnPrice delays delay number of points, then compares price to the buyLevel and sellLevel,
+// and returns an output slice indicating Buy or Sell at
+// each point. Note that Sell is returned for the first delay number of points.
+func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) []int {
+	out := make([]int, len(price))
+	for i := range price {
+		if i <= delay-1 {
+			out[i] = Sell
+			continue
+		}
+
+		switch {
+		case price[i] > buyLevel[i]:
+			out[i] = Buy
+		case price[i] < sellLevel[i]:
+			out[i] = Sell
+		default:
+			out[i] = out[i-1]
+		}
+	}
+	return out
+}
+
+// tradeAddStop modifies the input trade signal to sell on stop.
+// func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
+// 	tradeOut = make([]int, len(trade))
+
+// 	highCloseSinceBuy := 0.0
+// 	stopTriggered := false
+// 	stopTriggeredIndex := 0
+// 	for i := 1; i < len(trade); i++ {
+// 		if stopTriggered {
+// 			tradeOut[i] = Sell
+// 			highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+// 			if i > stopTriggeredIndex+stopLossDelay {
+// 				stopTriggered = false
+// 			}
+// 			continue
+// 		}
+
+// 		switch {
+// 		case trade[i-1] == Buy && trade[i] == Buy:
+// 			if dlIssue.DatasetAsColumns.AdjClose[i] > highCloseSinceBuy {
+// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+// 			}
+// 		case trade[i-1] == Sell && trade[i] == Buy:
+// 			if i == len(trade)-1 {
+// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+// 			} else {
+// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjOpen[i+1]
+// 			}
+// 		}
+
+// 		tradeOut[i] = trade[i]
+// 		if trade[i] == Buy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
+// 			stopTriggered = true
+// 			stopTriggeredIndex = i
+// 			tradeOut[i] = Sell
+// 		}
+// 	}
+
+// 	return tradeOut
+// }
