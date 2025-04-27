@@ -98,26 +98,26 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjOpen)
 	gainMarketClosed, err := quant.MarketClosedGain(issDAC.AdjOpen, issDAC.AdjClose)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	gainNormalizedMarketClosed := quant.MultiplySlice(1.0/gainMarketClosed[maLength], gainMarketClosed)
 	gainMarketClosedMA, err := quant.EMA(maLength, true, gainNormalizedMarketClosed)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	gainMarketClosedMALow := quant.MultiplySlice(1.0-maSplit, gainMarketClosedMA)
 	gainMarketClosedMAHigh := quant.MultiplySlice(1.0+maSplit, gainMarketClosedMA)
 	gainMarketOpen, err := quant.MarketOpenGain(issDAC.AdjOpen, issDAC.AdjClose)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	gainNormalizedMarketOpen := quant.MultiplySlice(1.0/gainMarketOpen[maLength], gainMarketOpen)
 	gainMarketOpenMA, err := quant.EMA(maLength, true, gainNormalizedMarketOpen)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	gainMarketOpenMALow := quant.MultiplySlice(1.0-maSplit, gainMarketOpenMA)
@@ -125,39 +125,41 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 
 	slopeC, err := quant.MultiplySlices(quant.Differentiate(gainMarketClosedMA), quant.ReciprocolSlice(gainMarketClosedMA))
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	slopeC, err = quant.EMA(30, false, slopeC)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	slopeC = quant.MultiplySlice(200, slopeC)
 
 	slopeO, err := quant.MultiplySlices(quant.Differentiate(gainMarketOpenMA), quant.ReciprocolSlice(gainMarketOpenMA))
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	slopeO, err = quant.EMA(30, false, slopeO)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	slopeO = quant.MultiplySlice(200, slopeO)
 	slopeCvO, err := quant.SumSlices(slopeC, slopeO)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	tradeLevel := make([]float64, len(slopeCvO))
 
 	tradeCvO, err := quant.TradeOnPrice(maLength, slopeCvO,
 		quant.OffsetSlice(maSplit, tradeLevel),
-		quant.OffsetSlice(-maSplit, tradeLevel))
+		quant.OffsetSlice(-maSplit, tradeLevel),
+		quant.OffsetSlice(-maSplit, tradeLevel),
+		quant.OffsetSlice(maSplit, tradeLevel))
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 

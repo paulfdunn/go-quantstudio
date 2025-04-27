@@ -6,13 +6,13 @@ const (
 
 	// CHANGE DEFAULTS HERE AND IN HTML FILES.
 	// Length of the MA in data points.
-	CvOLengthDefault    = 250
-	MAHLengthDefault    = 150
-	DirLengthDefault    = 200
-	EMA2LengthDefaultLF = 140
-	EMA2LengthDefaultHF = 110
-	MA2LengthDefaultLF  = 150
-	MA2LengthDefaultHF  = 40
+	CvOLengthDefault = 250
+	MAHLengthDefault = 150
+	DirLengthDefault = 200
+	// Update defaults for EMA in chartMA2.js:updateValues()
+	MA2LengthDefaultLF   = 150
+	MA2LengthDefaultHF   = 40
+	MA2ShortShiftDefault = 0.9
 	// The moving average is split +/- this amount; I.E. 0.05 means a buy at 5% above the MA
 	// and sell at 5% below the MA.
 	CvOSplitDefault = 0.04

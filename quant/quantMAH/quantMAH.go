@@ -88,15 +88,15 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	// priceMA, err := quant.EMA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
 	priceMA, err := quant.MA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	priceMA = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
 	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
 	priceMAHigh := quant.MultiplySlice(1.0+maSplit, priceMA)
-	tradeMA, err := quant.TradeOnPrice(maLength, priceNormalizedClose, priceMAHigh, priceMALow)
+	tradeMA, err := quant.TradeOnPrice(maLength, priceNormalizedClose, priceMAHigh, priceMALow, priceMALow, priceMAHigh)
 	if err != nil {
-		lpf(logh.Error, "%+v", err)
+		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLength, tradeMA, *iss)
@@ -284,7 +284,7 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 			"yaxis2": map[string]interface{}{
 				"title":          fmt.Sprintf("Trade (algorithm:moving average, longBuy=%d, close=%d)", quant.LongBuy, quant.Close),
 				"autorange":      false,
-				"range":          []float64{0.0, 1.0},
+				"range":          []float64{-1.0, 1.0},
 				"showspikes":     true,
 				"spikemode":      "across",
 				"spikedash":      "solid",

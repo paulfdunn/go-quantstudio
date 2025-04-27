@@ -23,6 +23,12 @@ const (
 	LongBuy   = 1
 	Close     = 0
 	ShortSell = -1
+
+	// TradeGap is the minimum number of points between trades. Settlement time is 3 days
+	// so 2 is used to insure another trade is not opened until the previous one is settled.
+	// (The open trade is closed, then 2 points are skipped, thus the next possible trade is
+	// 3 points away.)
+	TradeGap = 2
 )
 
 var (
@@ -281,9 +287,10 @@ func SumSlices(dataSlices ...[]float64) ([]float64, error) {
 	return out, nil
 }
 
-// TradeGain takes in input slice trade with values [LongBuy, Close], and after delay number of points,
-// applies the [LongBuy, Close] signals to dlIssue to proces a tradeHistory, gain (total gain), and
+// TradeGain takes in input slice trade with values [LongBuy, Close, ShortSell], and after delay number of points,
+// applies the [LongBuy, Close, ShortSell] signals to dlIssue to proces a tradeHistory, gain (total gain), and
 // tradeGain (accumulated gain/loss at each point).
+// All trades MUST Close between either a LongBuy or a ShortSell.
 func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory string, gain float64, tradeGain []float64) {
 	seriesLen := len(dlIssue.DatasetAsColumns.AdjOpen)
 	// tradeGain is the product of all daily changes in Issue price while a trades are open. This is useful
@@ -292,7 +299,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 	// gain is the product of all trade gains; where gain is sale_price/purchase_price.
 	// This will be slightly different than tradeGain due to floating point errors.
 	gain = 1.0
-	var longBuyPrice float64
+	var longBuyPrice, shortSellPrice float64
 	fd := dlIssue.DatasetAsColumns.Date[0].Format(DateFormat)
 	ld := dlIssue.DatasetAsColumns.Date[len(dlIssue.DatasetAsColumns.Date)-1].Format(DateFormat)
 	tradeHistory = fmt.Sprintf("first trading day: %s, last trading day: %s\n", fd, ld)
@@ -304,39 +311,78 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 		}
 
 		switch {
-		case trade[i-1] == Close && trade[i] == LongBuy:
+		case trade[i-1] == Close && (trade[i] == LongBuy || trade[i] == ShortSell):
+			action := ""
+			var price float64
+			if i < seriesLen-1 {
+				price = dlIssue.DatasetAsColumns.AdjOpen[i+1]
+			} else {
+				price = dlIssue.DatasetAsColumns.AdjOpen[i]
+			}
+			if trade[i] == LongBuy {
+				action = "long buy"
+				longBuyPrice = price
+			} else {
+				action = "short sell"
+				shortSellPrice = price
+			}
 			tradeGain[i] = tradeGain[i-1]
 			if i == seriesLen-1 {
-				tradeHistory += fmt.Sprintf("symbol: %s, date: %s **** LONG BUY TOMORROW ****",
-					dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
-				break
+				action = fmt.Sprintf("**** %s TOMORROW ****", action)
 			}
-			longBuyPrice = dlIssue.DatasetAsColumns.AdjOpen[i+1]
-			tradeHistory += fmt.Sprintf("symbol: %s, date: %s, long buy price: %8.2f, ",
-				dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), longBuyPrice)
-		case trade[i-1] == LongBuy && trade[i] == LongBuy:
-			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
+			tradeHistory += fmt.Sprintf("symbol: %s, date: %s, %s price: %8.2f, ",
+				dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), action, price)
+		case (trade[i-1] == LongBuy && trade[i] == LongBuy) || (trade[i-1] == ShortSell && trade[i] == ShortSell):
+			action := ""
+			var price, pointGain, thisGain float64
+			pointGain = dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
+			if trade[i] == LongBuy {
+				action = "long sell"
+				price = longBuyPrice
+				thisGain = dlIssue.DatasetAsColumns.AdjClose[i] / price
+			} else {
+				action = "short buy"
+				price = shortSellPrice
+				pointGain = 1 / pointGain
+				thisGain = price / dlIssue.DatasetAsColumns.AdjClose[i]
+			}
+			tradeGain[i] = tradeGain[i-1] * pointGain
 			if i == seriesLen-1 {
 				tradeHistory += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
-				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / longBuyPrice
 				gain *= thisGain
-				tradeHistory += fmt.Sprintf("long sell price: %8.2f, gain: %8.2f (TRADE STILL OPEN)\n", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
+				tradeHistory += fmt.Sprintf("%s price: %8.2f, gain: %8.2f (TRADE STILL OPEN)\n", action, dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
 			}
-		case (trade[i-1] == LongBuy && trade[i] == Close):
-			tradeGain[i] = tradeGain[i-1] * dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
-			tradeHistory += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
+		case (trade[i-1] == LongBuy || trade[i-1] == ShortSell) && trade[i] == Close:
+			action := ""
+			var finalGain, pointGain, price, thisGain float64
+			pointGain = dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
+			if i < seriesLen-1 {
+				price = dlIssue.DatasetAsColumns.AdjOpen[i+1]
+				finalGain = dlIssue.DatasetAsColumns.AdjOpen[i+1] / dlIssue.DatasetAsColumns.AdjClose[i]
+			} else {
+				price = dlIssue.DatasetAsColumns.AdjClose[i]
+				// There is no final gain to calculate, trade is closing at the final point.
+				finalGain = 1.0
+			}
+			if trade[i-1] == LongBuy {
+				action = "long sell"
+				thisGain = price / longBuyPrice
+				// Protect against logic errors by setting longBuyPrice to NaN when not in use.
+				longBuyPrice = math.NaN()
+				tradeGain[i] = tradeGain[i-1] * pointGain * finalGain
+			} else {
+				action = "short buy"
+				thisGain = shortSellPrice / price
+				// Protect against logic errors by setting shortSellPrice to NaN when not in use.
+				shortSellPrice = math.NaN()
+				tradeGain[i] = tradeGain[i-1] * (1 / pointGain) * (1 / finalGain)
+			}
 			if i == seriesLen-1 {
-				thisGain := dlIssue.DatasetAsColumns.AdjClose[i] / longBuyPrice
-				gain *= thisGain
-				tradeHistory += fmt.Sprintf("long sell price: %8.2f, gain: %8.2f **** TRADE TOMORROW ****\n", dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
-				break
+				action = fmt.Sprintf("**** %s TOMORROW ****", action)
 			}
-			tradeGain[i] = tradeGain[i] * dlIssue.DatasetAsColumns.AdjOpen[i+1] / dlIssue.DatasetAsColumns.AdjClose[i]
-			thisGain := dlIssue.DatasetAsColumns.AdjOpen[i+1] / longBuyPrice
-			// Protect against logic errors by setting longBuyPrice to NaN when not in use.
-			longBuyPrice = math.NaN()
+			tradeHistory += fmt.Sprintf("date: %s, ", dlIssue.DatasetAsColumns.Date[i].Format(DateFormat))
 			gain *= thisGain
-			tradeHistory += fmt.Sprintf("long sell price: %8.2f, gain: %8.2f\n", dlIssue.DatasetAsColumns.AdjOpen[i+1], thisGain)
+			tradeHistory += fmt.Sprintf("%s price: %8.2f, gain: %8.2f\n", action, price, thisGain)
 		case trade[i-1] == Close && trade[i] == Close:
 			tradeGain[i] = tradeGain[i-1]
 		}
@@ -355,28 +401,54 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 }
 
 // TradeOnPrice delays delay number of points, then compares price to the buyLevel and sellLevel,
-// and returns an output slice indicating LongBuy or Close at
+// and returns an output slice indicating [LongBuy, Close] at
 // each point. Note that Close is returned for the first delay number of points.
-func TradeOnPrice(delay int, price, buyLevel, sellLevel []float64) ([]int, error) {
-	if err := SlicesAreEqualLength(price, buyLevel, sellLevel); err != nil {
+// It is invalid for a both a long and short trade to be open at the same time.
+func TradeOnPrice(delay int, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel []float64) ([]int, error) {
+	if err := SlicesAreEqualLength(price, longBuyLevel, longSellLevel); err != nil {
 		lpf(logh.Error, "%+v", err)
 		return nil, err
 	}
 
+	var longTradeOpen, shortTradeOpen bool
 	out := make([]int, len(price))
+	out[0] = Close
+	gap := 0
 	for i := range price {
-		if i <= delay-1 {
+		if longTradeOpen && shortTradeOpen {
+			err := fmt.Errorf("long and short trades open at %d", i)
+			return nil, err
+		}
+
+		if i <= delay-1 || gap > 0 {
 			out[i] = Close
+			if gap > 0 {
+				gap--
+			}
 			continue
 		}
 
 		switch {
-		case price[i] > buyLevel[i]:
+		case !shortTradeOpen && longBuyLevel != nil && price[i] > longBuyLevel[i]:
 			out[i] = LongBuy
-		case price[i] < sellLevel[i]:
+			longTradeOpen = true
+		case longTradeOpen && longSellLevel != nil && price[i] < longSellLevel[i]:
 			out[i] = Close
+			longTradeOpen = false
+		case !longTradeOpen && shortSellLevel != nil && price[i] < shortSellLevel[i]:
+			out[i] = ShortSell
+			shortTradeOpen = true
+		case shortTradeOpen && shortBuyLevel != nil && price[i] > shortBuyLevel[i]:
+			out[i] = Close
+			shortTradeOpen = false
 		default:
-			out[i] = out[i-1]
+			if i > 0 {
+				out[i] = out[i-1]
+			}
+		}
+
+		if (i > 0 && out[i] == Close) && (out[i-1] == LongBuy || out[i-1] == ShortSell) {
+			gap = TradeGap
 		}
 	}
 	return out, nil
