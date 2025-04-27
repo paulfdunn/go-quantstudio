@@ -88,26 +88,24 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortS
 	var priceMALow []float64
 	var err error
 	if emaChecked {
-		priceMALow, err = quant.EMA(maLengthLF, true, issDAC.AdjOpen, issDAC.AdjClose)
+		priceMALow, err = quant.EMA(maLengthLF, true, priceNormalizedOpen, priceNormalizedClose)
 	} else {
-		priceMALow, err = quant.MA(maLengthLF, true, issDAC.AdjOpen, issDAC.AdjClose)
+		priceMALow, err = quant.MA(maLengthLF, true, priceNormalizedOpen, priceNormalizedClose)
 	}
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
-	priceMALow = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], priceMALow)
 	var priceMAHigh []float64
 	if emaChecked {
-		priceMAHigh, err = quant.EMA(maLengthHF, true, issDAC.AdjOpen, issDAC.AdjClose)
+		priceMAHigh, err = quant.EMA(maLengthHF, true, priceNormalizedOpen, priceNormalizedClose)
 	} else {
-		priceMAHigh, err = quant.MA(maLengthHF, true, issDAC.AdjOpen, issDAC.AdjClose)
+		priceMAHigh, err = quant.MA(maLengthHF, true, priceNormalizedOpen, priceNormalizedClose)
 	}
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
-	priceMAHigh = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], priceMAHigh)
 	// Shifting the low frequency moving average down for short trades makes those
 	// trades "harder" to enter and provides separation between the long and short trades.
 	shortMA := quant.MultiplySlice(maShortShift, priceMALow)
