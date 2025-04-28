@@ -156,8 +156,8 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	tradeCvO, err := quant.TradeOnPrice(maLength, slopeCvO,
 		quant.OffsetSlice(maSplit, tradeLevel),
 		quant.OffsetSlice(-maSplit, tradeLevel),
-		quant.OffsetSlice(-maSplit, tradeLevel),
-		quant.OffsetSlice(maSplit, tradeLevel))
+		nil,
+		nil)
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
