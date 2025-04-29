@@ -33,6 +33,7 @@ type QuantMA2 struct {
 	PriceMA              []float64
 	PriceMAHigh          []float64
 	PriceMALow           []float64
+	PriceMALowShort      []float64
 	Results              quant.Results
 }
 
@@ -122,7 +123,7 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortS
 		QuantsetAsColumns: QuantMA2{PriceNormalizedClose: priceNormalizedClose,
 			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,
-			PriceMAHigh:         priceMAHigh, PriceMALow: priceMALow,
+			PriceMAHigh:         priceMAHigh, PriceMALow: priceMALow, PriceMALowShort: shortMA,
 			Results: results,
 		}}
 }
@@ -215,6 +216,16 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				// "stackgroup": "one",
 				"line": map[string]interface{}{
 					"color": "rgba(255,65,54,0.5)",
+				},
+			},
+			{
+				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":    qIssue.QuantsetAsColumns.PriceMALowShort,
+				"name": "MALowShort",
+				"type": "scatter",
+				// "stackgroup": "one",
+				"line": map[string]interface{}{
+					"color": "rgba(255, 64, 54, 0.19)",
 				},
 			},
 			{
