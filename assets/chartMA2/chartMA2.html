@@ -95,6 +95,14 @@
 		  }
 		});
 
+		var inputMASplit = document.getElementById("maLengthHF");
+		inputMASplit.addEventListener("keypress", function(event) {
+		  if (event.key === "Enter") {
+			event.preventDefault();
+			document.getElementById("process").click();
+		  }
+		});
+
 		var inputMALength = document.getElementById("maLengthLF");
 		inputMALength.addEventListener("keypress", function(event) {
 		  if (event.key === "Enter") {
@@ -103,7 +111,7 @@
 		  }
 		});
 
-		var inputMASplit = document.getElementById("maLengthHF");
+		var inputMASplit = document.getElementById("maShortShift");
 		inputMASplit.addEventListener("keypress", function(event) {
 		  if (event.key === "Enter") {
 			event.preventDefault();
