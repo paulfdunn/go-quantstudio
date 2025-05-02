@@ -293,23 +293,23 @@ func Example_tradeOnPrice() {
 
 	// Test the delay by triggering a buy prior to the delay expiring.
 	price := []float64{1.0, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2}
-	result, _ := TradeOnPrice(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	result, _ := TradeOnSignal(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
 	// Test a long buy/sell.
 	price = []float64{1.0, 1.0, 1.2, 1.2, 0.9, 0.9, 0.9, 0.9}
-	result, _ = TradeOnPrice(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	result, _ = TradeOnSignal(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
 	// Test a TradeGap after a long buy/sell.
 	delay = 0
 	price = []float64{1.2, 1.2, 0.9, 1.2, 1.2, 1.2, 1.2, 1.2}
-	result, _ = TradeOnPrice(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	result, _ = TradeOnSignal(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
 	// Test a short buy/sell.
 	price = []float64{1.0, 0.7, 0.7, 1.0, 1.0, 1.0, 1.0, 1.0}
-	result, _ = TradeOnPrice(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	result, _ = TradeOnSignal(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
 	// Output:

@@ -110,7 +110,7 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortS
 	// Shifting the low frequency moving average down for short trades makes those
 	// trades "harder" to enter and provides separation between the long and short trades.
 	shortMA := quant.MultiplySlice(maShortShift, priceMALow)
-	tradeMA, err := quant.TradeOnPrice(maLengthLF, priceMAHigh, priceMALow, priceMALow, shortMA, shortMA)
+	tradeMA, err := quant.TradeOnSignal(maLengthLF, priceMAHigh, priceMALow, priceMALow, shortMA, shortMA)
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}

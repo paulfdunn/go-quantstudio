@@ -400,21 +400,21 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 	return tradeHistory, gain, tradeGain
 }
 
-// TradeOnPrice delays delay number of points, then compares price to the buyLevel and sellLevel,
-// and returns an output slice indicating [LongBuy, Close] at
+// TradeOnSignal delays delay number of points, then compares signal to the buyLevel and sellLevel,
+// and returns an output slice indicating [LongBuy, Close, ShortSell] at
 // each point. Note that Close is returned for the first delay number of points.
 // It is invalid for a both a long and short trade to be open at the same time.
-func TradeOnPrice(delay int, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel []float64) ([]int, error) {
-	if err := SlicesAreEqualLength(price, longBuyLevel, longSellLevel); err != nil {
+func TradeOnSignal(delay int, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel []float64) ([]int, error) {
+	if err := SlicesAreEqualLength(signal, longBuyLevel, longSellLevel); err != nil {
 		lpf(logh.Error, "%+v", err)
 		return nil, err
 	}
 
 	var longTradeOpen, shortTradeOpen bool
-	out := make([]int, len(price))
+	out := make([]int, len(signal))
 	out[0] = Close
 	gap := 0
-	for i := range price {
+	for i := range signal {
 		if longTradeOpen && shortTradeOpen {
 			err := fmt.Errorf("long and short trades open at %d", i)
 			return nil, err
@@ -429,16 +429,16 @@ func TradeOnPrice(delay int, price, longBuyLevel, longSellLevel, shortSellLevel,
 		}
 
 		switch {
-		case !shortTradeOpen && longBuyLevel != nil && price[i] > longBuyLevel[i]:
+		case !shortTradeOpen && longBuyLevel != nil && signal[i] > longBuyLevel[i]:
 			out[i] = LongBuy
 			longTradeOpen = true
-		case longTradeOpen && longSellLevel != nil && price[i] < longSellLevel[i]:
+		case longTradeOpen && longSellLevel != nil && signal[i] < longSellLevel[i]:
 			out[i] = Close
 			longTradeOpen = false
-		case !longTradeOpen && shortSellLevel != nil && price[i] < shortSellLevel[i]:
+		case !longTradeOpen && shortSellLevel != nil && signal[i] < shortSellLevel[i]:
 			out[i] = ShortSell
 			shortTradeOpen = true
-		case shortTradeOpen && shortBuyLevel != nil && price[i] > shortBuyLevel[i]:
+		case shortTradeOpen && shortBuyLevel != nil && signal[i] > shortBuyLevel[i]:
 			out[i] = Close
 			shortTradeOpen = false
 		default:

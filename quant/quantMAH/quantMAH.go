@@ -94,7 +94,7 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	priceMA = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
 	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
 	priceMAHigh := quant.MultiplySlice(1.0+maSplit, priceMA)
-	tradeMA, err := quant.TradeOnPrice(maLength, priceNormalizedClose, priceMAHigh, priceMALow, nil, nil)
+	tradeMA, err := quant.TradeOnSignal(maLength, priceNormalizedClose, priceMAHigh, priceMALow, nil, nil)
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}

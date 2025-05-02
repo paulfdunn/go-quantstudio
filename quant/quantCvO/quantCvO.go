@@ -153,7 +153,7 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	}
 	tradeLevel := make([]float64, len(slopeCvO))
 
-	tradeCvO, err := quant.TradeOnPrice(maLength, slopeCvO,
+	tradeCvO, err := quant.TradeOnSignal(maLength, slopeCvO,
 		quant.OffsetSlice(maSplit, tradeLevel),
 		quant.OffsetSlice(-maSplit, tradeLevel),
 		nil,
