@@ -17,18 +17,24 @@ type Results struct {
 	TradeGainVsTime []float64
 }
 
+type TradeOnSignalLongRebuyInputs struct {
+	DlIssue           *downloader.Issue
+	AllowedLongRebuys int
+	ConsecutiveUpDays int
+	Stop              float64
+}
+
 const (
 	DateFormat = "2006-01-02"
 
+	LongRebuy = 2
 	LongBuy   = 1
 	Close     = 0
 	ShortSell = -1
 
-	// TradeGap is the minimum number of points between trades. Settlement time is 3 days
-	// so 2 is used to insure another trade is not opened until the previous one is settled.
-	// (The open trade is closed, then 2 points are skipped, thus the next possible trade is
-	// 3 points away.)
-	TradeGap = 2
+	// TradeGap is the minimum number of points between trades. Settlement time is 1 days
+	// so 1 is used to insure another trade is not opened until the previous one is settled.
+	TradeGap = 1
 )
 
 var (
@@ -61,6 +67,28 @@ func AnnualizedGain(totalGain float64, startDate time.Time, endDate time.Time) f
 	diff := endDate.Sub(startDate)
 	years := diff.Hours() / (24 * 365)
 	return math.Pow(totalGain, 1/years)
+}
+
+// ConsecutiveDirection will return a slice of integers indicating the cummulative direction of the input slice.
+// The output slice will be 0 if the input is equal to the previous point, +1 if the input is increasing,
+// and -1 if the input is decreasing. The output slice will be 0 for the first point.
+// The output slice will be 0 for the first point.
+func ConsecutiveDirection(input []float64) []int {
+	out := make([]int, len(input))
+	for i := 1; i < len(input); i++ {
+		if input[i] == input[i-1] {
+			out[i] = 0
+		} else if out[i-1] >= 0 && input[i] > input[i-1] {
+			out[i] = out[i-1] + 1
+		} else if out[i-1] <= 0 && input[i] > input[i-1] {
+			out[i] = 1
+		} else if out[i-1] <= 0 && input[i] < input[i-1] {
+			out[i] = out[i-1] - 1
+		} else if out[i-1] >= 0 && input[i] < input[i-1] {
+			out[i] = -1
+		}
+	}
+	return out
 }
 
 // Differentiate will return the backwards difference of the input slice.
@@ -287,8 +315,8 @@ func SumSlices(dataSlices ...[]float64) ([]float64, error) {
 	return out, nil
 }
 
-// TradeGain takes in input slice trade with values [LongBuy, Close, ShortSell], and after delay number of points,
-// applies the [LongBuy, Close, ShortSell] signals to dlIssue to proces a tradeHistory, gain (total gain), and
+// TradeGain takes in input slice trade with values [LongRebuy, LongBuy, Close, ShortSell], and after delay number of points,
+// applies the [LongRebuy, LongBuy, Close, ShortSell] signals to dlIssue to proces a tradeHistory, gain (total gain), and
 // tradeGain (accumulated gain/loss at each point).
 // All trades MUST Close between either a LongBuy or a ShortSell.
 func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory string, gain float64, tradeGain []float64) {
@@ -311,7 +339,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 		}
 
 		switch {
-		case trade[i-1] == Close && (trade[i] == LongBuy || trade[i] == ShortSell):
+		case trade[i-1] == Close && (trade[i] >= LongBuy || trade[i] <= ShortSell):
 			action := ""
 			var price float64
 			if i < seriesLen-1 {
@@ -319,7 +347,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 			} else {
 				price = dlIssue.DatasetAsColumns.AdjOpen[i]
 			}
-			if trade[i] == LongBuy {
+			if trade[i] >= LongBuy {
 				action = "long buy"
 				longBuyPrice = price
 			} else {
@@ -332,11 +360,11 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 			}
 			tradeHistory += fmt.Sprintf("symbol: %s, date: %s, %s price: %8.2f, ",
 				dlIssue.Symbol, dlIssue.DatasetAsColumns.Date[i].Format(DateFormat), action, price)
-		case (trade[i-1] == LongBuy && trade[i] == LongBuy) || (trade[i-1] == ShortSell && trade[i] == ShortSell):
+		case (trade[i-1] >= LongBuy && trade[i] >= LongBuy) || (trade[i-1] <= ShortSell && trade[i] <= ShortSell):
 			action := ""
 			var price, pointGain, thisGain float64
 			pointGain = dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
-			if trade[i] == LongBuy {
+			if trade[i] >= LongBuy {
 				action = "long sell"
 				price = longBuyPrice
 				thisGain = dlIssue.DatasetAsColumns.AdjClose[i] / price
@@ -352,7 +380,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 				gain *= thisGain
 				tradeHistory += fmt.Sprintf("%s price: %8.2f, gain: %8.2f (TRADE STILL OPEN)\n", action, dlIssue.DatasetAsColumns.AdjClose[i], thisGain)
 			}
-		case (trade[i-1] == LongBuy || trade[i-1] == ShortSell) && trade[i] == Close:
+		case (trade[i-1] >= LongBuy || trade[i-1] <= ShortSell) && trade[i] == Close:
 			action := ""
 			var finalGain, pointGain, price, thisGain float64
 			pointGain = dlIssue.DatasetAsColumns.AdjClose[i] / dlIssue.DatasetAsColumns.AdjClose[i-1]
@@ -364,7 +392,7 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 				// There is no final gain to calculate, trade is closing at the final point.
 				finalGain = 1.0
 			}
-			if trade[i-1] == LongBuy {
+			if trade[i-1] >= LongBuy {
 				action = "long sell"
 				thisGain = price / longBuyPrice
 				// Protect against logic errors by setting longBuyPrice to NaN when not in use.
@@ -401,23 +429,46 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 }
 
 // TradeOnSignal delays delay number of points, then compares signal to the buyLevel and sellLevel,
-// and returns an output slice indicating [LongBuy, Close, ShortSell] at
+// and returns an output slice indicating [LongRebuy, LongBuy, Close, ShortSell] at
 // each point. Note that Close is returned for the first delay number of points.
 // It is invalid for a both a long and short trade to be open at the same time.
-func TradeOnSignal(delay int, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel []float64) ([]int, error) {
+// TradeOnSignalLongRebuyInputs is used to enable re-buy on long trades. This is useful for
+// getting back into a trade that rapidly turns around. The only requirement is that
+// consecutiveUpDays >= rebuyInputs.ConsecutiveUpDays. The only transition from LongRebuy is to
+// LongBuy (the signal ultimately exceeds the longBuyLevel), or the stop is hit and the trade is closed.
+func TradeOnSignal(rebuyInputs *TradeOnSignalLongRebuyInputs, delay int, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel []float64) ([]int, error) {
+	// longRebuyEnabled is an attempt to get back in sooner in the event of a sudden direction change.
+	longRebuyEnabled := false
+	if rebuyInputs != nil && rebuyInputs.DlIssue != nil {
+		longRebuyEnabled = true
+	}
+
+	if longRebuyEnabled {
+		if err := SlicesAreEqualLength(signal, rebuyInputs.DlIssue.DatasetAsColumns.AdjClose, rebuyInputs.DlIssue.DatasetAsColumns.AdjOpen); err != nil {
+			lpf(logh.Error, "%+v", err)
+			return nil, err
+		}
+	}
 	if err := SlicesAreEqualLength(signal, longBuyLevel, longSellLevel); err != nil {
 		lpf(logh.Error, "%+v", err)
 		return nil, err
 	}
 
-	var longTradeOpen, shortTradeOpen bool
+	consecutiveUpDays := 0
+	longRebuys := 0
+	seriesLen := 0
+	if longRebuyEnabled {
+		seriesLen = len(rebuyInputs.DlIssue.DatasetAsColumns.AdjClose)
+	}
 	out := make([]int, len(signal))
 	out[0] = Close
 	gap := 0
-	for i := range signal {
-		if longTradeOpen && shortTradeOpen {
-			err := fmt.Errorf("long and short trades open at %d", i)
-			return nil, err
+	longRebuyPrice := 0.0
+	for i := 1; i < len(signal); i++ {
+		if longRebuyEnabled && rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i] > rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i-1] {
+			consecutiveUpDays++
+		} else {
+			consecutiveUpDays = 0
 		}
 
 		if i <= delay-1 || gap > 0 {
@@ -429,68 +480,85 @@ func TradeOnSignal(delay int, signal, longBuyLevel, longSellLevel, shortSellLeve
 		}
 
 		switch {
-		case !shortTradeOpen && longBuyLevel != nil && signal[i] > longBuyLevel[i]:
+		case !(out[i-1] == ShortSell) && longBuyLevel != nil && signal[i] > longBuyLevel[i]:
 			out[i] = LongBuy
-			longTradeOpen = true
-		case longTradeOpen && longSellLevel != nil && signal[i] < longSellLevel[i]:
+		case out[i-1] == LongBuy && longSellLevel != nil && signal[i] < longSellLevel[i]:
 			out[i] = Close
-			longTradeOpen = false
-		case !longTradeOpen && shortSellLevel != nil && signal[i] < shortSellLevel[i]:
+			longRebuys = 0
+		case longRebuyEnabled && out[i-1] == LongRebuy && rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i] < longRebuyPrice*rebuyInputs.Stop:
+			out[i] = Close
+		case !(out[i-1] >= LongBuy) && shortSellLevel != nil && signal[i] < shortSellLevel[i]:
 			out[i] = ShortSell
-			shortTradeOpen = true
-		case shortTradeOpen && shortBuyLevel != nil && signal[i] > shortBuyLevel[i]:
+		case out[i-1] <= ShortSell && shortBuyLevel != nil && signal[i] > shortBuyLevel[i]:
 			out[i] = Close
-			shortTradeOpen = false
+		case longRebuyEnabled && longRebuys < rebuyInputs.AllowedLongRebuys && !(out[i-1] >= LongBuy || out[i-1] == ShortSell) &&
+			consecutiveUpDays >= rebuyInputs.ConsecutiveUpDays:
+			out[i] = LongRebuy
+			longRebuys++
+			if i < seriesLen-1 {
+				longRebuyPrice = rebuyInputs.DlIssue.DatasetAsColumns.AdjOpen[i+1]
+			}
 		default:
 			if i > 0 {
 				out[i] = out[i-1]
 			}
 		}
 
-		if (i > 0 && out[i] == Close) && (out[i-1] == LongBuy || out[i-1] == ShortSell) {
+		if (i > 0 && out[i] == Close) && (out[i-1] >= LongBuy || out[i-1] <= ShortSell) {
 			gap = TradeGap
 		}
 	}
 	return out, nil
 }
 
-// tradeAddStop modifies the input trade signal to sell on stop.
-// func tradeAddStop(trade []int, dlIssue downloader.Issue) (tradeOut []int) {
-// 	tradeOut = make([]int, len(trade))
+// TradeAddStop modifies the input trade signal to sell on stop.
+// stopLoss is the percentage of the high price since the trade was opened that will trigger a stop.
+// stopLossDelay keeps a long trade closed for this many points after the stop is triggered.
+// This is to prevent a trade from being closed and then immediately re-opened.
+func TradeAddStop(trade []int, stopLoss float64, stopLossDelay int, dlIssue downloader.Issue) (tradeOut []int) {
+	tradeOut = make([]int, len(trade))
 
-// 	highCloseSinceBuy := 0.0
-// 	stopTriggered := false
-// 	stopTriggeredIndex := 0
-// 	for i := 1; i < len(trade); i++ {
-// 		if stopTriggered {
-// 			tradeOut[i] = Close
-// 			highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-// 			if i > stopTriggeredIndex+stopLossDelay {
-// 				stopTriggered = false
-// 			}
-// 			continue
-// 		}
+	bestCloseSinceBuy := 0.0
+	stopTriggered := false
+	stopTriggeredIndex := 0
+	for i := 1; i < len(trade); i++ {
+		if stopTriggered {
+			tradeOut[i] = Close
+			if i >= stopTriggeredIndex+stopLossDelay {
+				stopTriggered = false
+			}
+			continue
+		}
 
-// 		switch {
-// 		case trade[i-1] == LongBuy && trade[i] == LongBuy:
-// 			if dlIssue.DatasetAsColumns.AdjClose[i] > highCloseSinceBuy {
-// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-// 			}
-// 		case trade[i-1] == Close && trade[i] == LongBuy:
-// 			if i == len(trade)-1 {
-// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
-// 			} else {
-// 				highCloseSinceBuy = dlIssue.DatasetAsColumns.AdjOpen[i+1]
-// 			}
-// 		}
+		switch {
+		case trade[i-1] >= LongBuy && trade[i] >= LongBuy:
+			if dlIssue.DatasetAsColumns.AdjClose[i] > bestCloseSinceBuy {
+				bestCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+			}
+		case trade[i-1] <= ShortSell && trade[i] <= ShortSell:
+			if dlIssue.DatasetAsColumns.AdjClose[i] < bestCloseSinceBuy {
+				bestCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+			}
+		case trade[i-1] == Close && (trade[i] >= LongBuy || trade[i] <= ShortSell):
+			if i == len(trade)-1 {
+				bestCloseSinceBuy = dlIssue.DatasetAsColumns.AdjClose[i]
+			} else {
+				// When opening a new trade, set the stop based on the open price, since that is
+				// where it was bought.
+				bestCloseSinceBuy = dlIssue.DatasetAsColumns.AdjOpen[i+1]
+			}
+		}
 
-// 		tradeOut[i] = trade[i]
-// 		if trade[i] == LongBuy && dlIssue.DatasetAsColumns.AdjClose[i]/highCloseSinceBuy < stopLoss {
-// 			stopTriggered = true
-// 			stopTriggeredIndex = i
-// 			tradeOut[i] = Close
-// 		}
-// 	}
+		tradeOut[i] = trade[i]
+		changeLong := dlIssue.DatasetAsColumns.AdjClose[i] / bestCloseSinceBuy
+		changeShort := 1 / changeLong
+		if trade[i] >= LongBuy && changeLong < stopLoss ||
+			trade[i] <= ShortSell && changeShort < stopLoss {
+			stopTriggered = true
+			stopTriggeredIndex = i
+			tradeOut[i] = Close
+		}
+	}
 
-// 	return tradeOut
-// }
+	return tradeOut
+}

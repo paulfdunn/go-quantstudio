@@ -123,7 +123,7 @@ func main() {
 	}
 	http.Handle("/", http.FileServer(http.FS(fsSub)))
 	http.HandleFunc("/plotly-cvo", quantCvO.WrappedPlotlyHandler(dlGroupChanCvO, tradingSymbols))
-	http.HandleFunc("/plotly-ma", quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols))
+	http.HandleFunc("/plotly-mah", quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols))
 	http.HandleFunc("/plotly-ma2", quantMA2.WrappedPlotlyHandler(dlGroupChanMA2, tradingSymbols))
 	http.HandleFunc("/downloadData", wrappedDownloadYahooData(dataFilepath, tradingSymbols, dlGroupChanCvO, dlGroupChanMA, dlGroupChanMA2))
 	http.HandleFunc("/symbols", wrappedSymbols(tradingSymbols))
@@ -149,11 +149,11 @@ func main() {
 	reqCvO := httptest.NewRequest(http.MethodGet, targetCvO, nil)
 	wCvO := httptest.NewRecorder()
 	quantCvO.WrappedPlotlyHandler(dlGroupChanCvO, tradingSymbols)(wCvO, reqCvO)
-	targetMAH := fmt.Sprintf("/plotly-ma?symbol=%s&maLength=%d&maSplit=%f", tradingSymbols[0], defs.MAHLengthDefault, defs.MAHSplitDefault)
+	targetMAH := fmt.Sprintf("/plotly-mah?symbol=%s&maLength=%d&maSplit=%f&maShortShift=%05.2f&stopLoss=%05.2f&stopLossDelay=%d&longRebuy=%t&ema=%t", tradingSymbols[0], defs.MAHLengthDefault, defs.MAHSplitDefault, defs.MAHShortShiftDefault, defs.MAHStopLoss, defs.MAHStopLossDelay, defs.MAHLongRebuy, defs.MAHEMA)
 	reqMAH := httptest.NewRequest(http.MethodGet, targetMAH, nil)
 	wMAH := httptest.NewRecorder()
 	quantMAH.WrappedPlotlyHandler(dlGroupChanMA, tradingSymbols)(wMAH, reqMAH)
-	targetMA2 := fmt.Sprintf("/plotly-ma2?symbol=%s&maLengthLF=%d&maLengthHF=%d&maShortShift=%05.2f&ema=false", tradingSymbols[0], defs.MA2LengthDefaultLF, defs.MA2LengthDefaultHF, defs.MA2ShortShiftDefault)
+	targetMA2 := fmt.Sprintf("/plotly-ma2?symbol=%s&maLengthLF=%d&maLengthHF=%d&maShortShift=%05.2f&stopLoss=%05.2f&stopLossDelay=%d&longRebuy=%t&ema=%t", tradingSymbols[0], defs.MA2LengthDefaultLF, defs.MA2LengthDefaultHF, defs.MA2ShortShiftDefault, defs.MA2StopLoss, defs.MA2StopLossDelay, defs.MA2LongRebuy, defs.MA2EMA)
 	reqMA2 := httptest.NewRequest(http.MethodGet, targetMA2, nil)
 	wMA2 := httptest.NewRecorder()
 	quantMA2.WrappedPlotlyHandler(dlGroupChanMA2, tradingSymbols)(wMA2, reqMA2)
@@ -214,8 +214,8 @@ func runMARange(tradingSymbols []string) {
 		for j := range maSplit {
 			symbolResults := 1.0
 			// qg := quantCvO.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
-			// qg := quantMAH.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j])
-			qg := quantMA2.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j], 0.9, false)
+			// qg := quantMAH.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j], defs.MAHShortShiftDefault, defs.MAHStopLoss, defs.MAHStopLossDelay, defs.MAHLongRebuy, defs.MAHEMA)
+			qg := quantMA2.GetGroup(dlGroup, tradingSymbols, maLength[i], maSplit[j], defs.MA2ShortShiftDefault, defs.MA2StopLoss, defs.MA2StopLossDelay, defs.MA2LongRebuy, defs.MA2EMA)
 			for _, iss := range qg.Issues {
 				symbolResults *= iss.QuantsetAsColumns.Results.AnnualizedGain
 			}

@@ -26,6 +26,7 @@ type Issue struct {
 }
 
 type QuantMA2 struct {
+	Direction            []int
 	PriceNormalizedClose []float64
 	PriceNormalizedHigh  []float64
 	PriceNormalizedLow   []float64
@@ -61,7 +62,7 @@ func (iss Issue) String() string {
 	return string(jsonh.PrettyJSON(out))
 }
 
-func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLengthLF int, maLengthHF int, maShortShift float64, emaChecked bool) *Group {
+func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLengthLF int, maLengthHF int, maShortShift float64, stopLoss float64, stopLossDelay int, longRebuyChecked, emaChecked bool) *Group {
 	lpf(logh.Info, "calling quant.Run with maLengthLF: %d, maLengthHF: %d, maShortShift: %5.2", maLengthLF, maLengthHF, maShortShift)
 	group := Group{Name: downloaderGroup.Name}
 	group.Issues = make([]Issue, len(downloaderGroup.Issues))
@@ -74,34 +75,34 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 		// Dont use the looping variable in a "i,v" style for loop as
 		// the variable is pointing to a pointer
 		group.Issues[index] = Issue{DownloaderIssue: &downloaderGroup.Issues[index]}
-		group.Issues[index] = UpdateIssue(group.Issues[index].DownloaderIssue, maLengthLF, maLengthHF, maShortShift, emaChecked)
+		group.Issues[index] = UpdateIssue(group.Issues[index].DownloaderIssue, maLengthLF, maLengthHF, maShortShift, stopLoss, stopLossDelay, longRebuyChecked, emaChecked)
 	}
 
 	return &group
 }
 
-func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortShift float64, emaChecked bool) Issue {
+func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortShift float64, stopLoss float64, stopLossDelay int, longRebuyChecked, emaChecked bool) Issue {
 	issDAC := iss.DatasetAsColumns
 	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjClose)
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjHigh)
 	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjLow)
 	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjOpen)
-	var priceMALow []float64
+	var priceMALf []float64
 	var err error
 	if emaChecked {
-		priceMALow, err = quant.EMA(maLengthLF, true, priceNormalizedOpen, priceNormalizedClose)
+		priceMALf, err = quant.EMA(maLengthLF, true, priceNormalizedOpen, priceNormalizedClose)
 	} else {
-		priceMALow, err = quant.MA(maLengthLF, true, priceNormalizedOpen, priceNormalizedClose)
+		priceMALf, err = quant.MA(maLengthLF, true, priceNormalizedOpen, priceNormalizedClose)
 	}
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
-	var priceMAHigh []float64
+	var priceMAHf []float64
 	if emaChecked {
-		priceMAHigh, err = quant.EMA(maLengthHF, true, priceNormalizedOpen, priceNormalizedClose)
+		priceMAHf, err = quant.EMA(maLengthHF, true, priceNormalizedOpen, priceNormalizedClose)
 	} else {
-		priceMAHigh, err = quant.MA(maLengthHF, true, priceNormalizedOpen, priceNormalizedClose)
+		priceMAHf, err = quant.MA(maLengthHF, true, priceNormalizedOpen, priceNormalizedClose)
 	}
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
@@ -109,21 +110,29 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortS
 	}
 	// Shifting the low frequency moving average down for short trades makes those
 	// trades "harder" to enter and provides separation between the long and short trades.
-	shortMA := quant.MultiplySlice(maShortShift, priceMALow)
-	tradeMA, err := quant.TradeOnSignal(maLengthLF, priceMAHigh, priceMALow, priceMALow, shortMA, shortMA)
+	shortMA := quant.MultiplySlice(maShortShift, priceMALf)
+	var rebuy quant.TradeOnSignalLongRebuyInputs
+	if longRebuyChecked {
+		rebuy = quant.TradeOnSignalLongRebuyInputs{DlIssue: iss, AllowedLongRebuys: 3, ConsecutiveUpDays: 7, Stop: 0.95}
+	}
+	tradeMA, err := quant.TradeOnSignal(&rebuy, maLengthLF, priceMAHf, priceMALf, priceMALf, shortMA, shortMA)
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
+	tradeMA = quant.TradeAddStop(tradeMA, stopLoss, stopLossDelay, *iss)
+	dir := quant.ConsecutiveDirection(iss.DatasetAsColumns.Close)
 	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLengthLF, tradeMA, *iss)
 	annualizedGain := quant.AnnualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
 	results := quant.Results{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
 		Trade: tradeMA, TradeGainVsTime: tradeGainVsTime}
 	return Issue{DownloaderIssue: iss,
-		QuantsetAsColumns: QuantMA2{PriceNormalizedClose: priceNormalizedClose,
-			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
+		QuantsetAsColumns: QuantMA2{
+			Direction:            dir,
+			PriceNormalizedClose: priceNormalizedClose,
+			PriceNormalizedHigh:  priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,
-			PriceMAHigh:         priceMAHigh, PriceMALow: priceMALow, PriceMALowShort: shortMA,
+			PriceMAHigh:         priceMAHf, PriceMALow: priceMALf, PriceMALowShort: shortMA,
 			Results: results,
 		}}
 }
@@ -154,8 +163,25 @@ func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []s
 		mass := r.URL.Query().Get("maShortShift")
 		maShortShift, err := strconv.ParseFloat(mass, 64)
 		if err != nil {
-			lpf(logh.Error, "converting maLengthHF value '%s' to int", mahf)
+			lpf(logh.Error, "converting maShortShift value '%s' to float", mass)
 			return
+		}
+		sl := r.URL.Query().Get("stopLoss")
+		stopLoss, err := strconv.ParseFloat(sl, 64)
+		if err != nil {
+			lpf(logh.Error, "converting stopLoss value '%s' to float", sl)
+			return
+		}
+		sld := r.URL.Query().Get("stopLossDelay")
+		stopLossDelay, err := strconv.Atoi(sld)
+		if err != nil {
+			lpf(logh.Error, "converting stopLossDelay value '%s' to int", sld)
+			return
+		}
+		longRebuy := r.URL.Query().Get("longRebuy")
+		longRebuyChecked := false
+		if strings.EqualFold(longRebuy, "true") {
+			longRebuyChecked = true
 		}
 		ema := r.URL.Query().Get("ema")
 		emaChecked := false
@@ -184,7 +210,7 @@ func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []s
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		iss := UpdateIssue(&dlGroup.Issues[symbolIndex], maLengthLF, maLengthHF, maShortShift, emaChecked)
+		iss := UpdateIssue(&dlGroup.Issues[symbolIndex], maLengthLF, maLengthHF, maShortShift, stopLoss, stopLossDelay, longRebuyChecked, emaChecked)
 		if err := plotlyJSON(iss, w); err != nil {
 			lpf(logh.Error, "issue: %s\n%+v", err, iss)
 		}
@@ -258,6 +284,17 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 					"color": "rgba(255, 172, 47, 1)",
 				},
 			},
+			// Third y-axis
+			{
+				"x":     qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":     qIssue.QuantsetAsColumns.Direction,
+				"name":  "Direction",
+				"type":  "scatter",
+				"yaxis": "y3",
+				"line": map[string]interface{}{
+					"color": "rgba(206, 204, 199, 0.3)",
+				},
+			},
 		},
 		"layout": map[string]interface{}{
 			"spikedistance": 50,
@@ -308,7 +345,7 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 			"yaxis2": map[string]interface{}{
 				"title":          fmt.Sprintf("Trade (algorithm:moving average, longBuy=%d, close=%d)", quant.LongBuy, quant.Close),
 				"autorange":      false,
-				"range":          []float64{-1.0, 1.0},
+				"range":          []float64{-1.0, 2.0},
 				"showspikes":     true,
 				"spikemode":      "across",
 				"spikedash":      "solid",
@@ -321,6 +358,24 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"anchor":     "x",
 				"overlaying": "y",
 				"side":       "right",
+			},
+			"yaxis3": map[string]interface{}{
+				"title":          "Direction",
+				"autorange":      false,
+				"range":          []float64{-10.0, 10.0},
+				"showspikes":     true,
+				"spikemode":      "across",
+				"spikedash":      "solid",
+				"spikecolor":     "#000000",
+				"spikethickness": 1,
+				"tick0":          0,
+				"dtick":          1.0,
+				// "type":       "log",
+				// Below are only needed when using single row
+				"anchor":     "free",
+				"overlaying": "y",
+				"side":       "right",
+				"position":   1.15,
 			},
 			// "yaxis3": map[string]interface{}{
 			// 	"title":      "Trade Gain (%)",

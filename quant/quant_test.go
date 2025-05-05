@@ -45,6 +45,15 @@ func Example_annualizeGain() {
 	// annualizedGain from 2022-01-01 to 2022-07-01 with total gain:  1.10 is  1.21
 }
 
+func Example_consecutiveDirection() {
+	f1 := []float64{0, 1.0, 1.0, 1.1, 1.2, 1.0, 0.9, 0.9, 1.0}
+	result := ConsecutiveDirection(f1)
+	fmt.Printf("%+v", result)
+
+	// Output:
+	// [0 1 0 1 2 -1 -2 0 1]
+}
+
 func Example_differentiate() {
 	f1 := []float64{0, 0, 0, 1, 0, 0, -1, 0, 0}
 	result := Differentiate(f1)
@@ -284,7 +293,7 @@ func Example_tradeGain() {
 	//  1.00 [1 1 1 1 1 1 1 1]
 }
 
-func Example_tradeOnPrice() {
+func Example_tradeOnSignal() {
 	delay := 2
 	longBuyLevel := []float64{1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1, 1.1}
 	longSellLevel := []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
@@ -292,29 +301,121 @@ func Example_tradeOnPrice() {
 	shortBuyLevel := []float64{0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9, 0.9}
 
 	// Test the delay by triggering a buy prior to the delay expiring.
-	price := []float64{1.0, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2}
-	result, _ := TradeOnSignal(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	signal := []float64{1.0, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2}
+	result, _ := TradeOnSignal(nil, delay, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
 	// Test a long buy/sell.
-	price = []float64{1.0, 1.0, 1.2, 1.2, 0.9, 0.9, 0.9, 0.9}
-	result, _ = TradeOnSignal(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	signal = []float64{1.0, 1.0, 1.2, 1.2, 0.9, 0.9, 0.9, 0.9}
+	result, _ = TradeOnSignal(nil, delay, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
 	// Test a TradeGap after a long buy/sell.
 	delay = 0
-	price = []float64{1.2, 1.2, 0.9, 1.2, 1.2, 1.2, 1.2, 1.2}
-	result, _ = TradeOnSignal(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	signal = []float64{1.2, 1.2, 0.9, 1.2, 1.2, 1.2, 1.2, 1.2}
+	result, _ = TradeOnSignal(nil, delay, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
 	// Test a short buy/sell.
-	price = []float64{1.0, 0.7, 0.7, 1.0, 1.0, 1.0, 1.0, 1.0}
-	result, _ = TradeOnSignal(delay, price, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	signal = []float64{1.0, 0.7, 0.7, 1.0, 1.0, 1.0, 1.0, 1.0}
+	result, _ = TradeOnSignal(nil, delay, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	fmt.Printf("%+v\n", result)
+
+	// Test the rebuy and transition to a long buy
+	iss := downloader.Issue{}
+	signal = []float64{1.2, 1.2, 0.9, 0.91, 0.92, 1.2, 1.2, 1.2}
+	iss.DatasetAsColumns.AdjClose = signal
+	iss.DatasetAsColumns.AdjOpen = signal
+	rebuy := TradeOnSignalLongRebuyInputs{DlIssue: &iss, AllowedLongRebuys: 1, ConsecutiveUpDays: 2, Stop: 0.95}
+	result, _ = TradeOnSignal(&rebuy, delay, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
+	fmt.Printf("%+v\n", result)
+
+	// Test the rebuy and then hit the stop.
+	iss = downloader.Issue{}
+	signalClose := []float64{1.2, 1.2, 0.9, 0.91, 0.92, 0.8, 0.8, 0.8}
+	signalOpen := []float64{1.2, 1.2, 0.9, 0.91, 0.92, 0.92, 0.8, 0.8}
+	iss.DatasetAsColumns.AdjClose = signalClose
+	iss.DatasetAsColumns.AdjOpen = signalOpen
+	rebuy = TradeOnSignalLongRebuyInputs{DlIssue: &iss, AllowedLongRebuys: 1, ConsecutiveUpDays: 2, Stop: 0.95}
+	result, _ = TradeOnSignal(&rebuy, delay, signalClose, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
 	// Output:
 	// [0 0 1 1 1 1 1 1]
 	// [0 0 1 1 0 0 0 0]
-	// [1 1 0 0 0 1 1 1]
+	// [0 1 0 0 1 1 1 1]
 	// [0 -1 -1 0 0 0 0 0]
+	// [0 1 0 0 2 1 1 1]
+	// [0 1 0 0 2 0 0 0]
+}
+
+func Example_tradeAddStop() {
+	// Define constants for readability
+	lby := LongBuy
+	cls := Close
+	ssl := ShortSell
+
+	// Test case 1: Long trade, no stop triggered
+	trade := []int{cls, cls, lby, lby, lby, cls, cls}
+	closePrices := []float64{1.0, 1.0, 1.0, 1.1, 1.2, 1.2, 1.2}
+	openPrices := []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	issue := downloader.Issue{}
+	issue.DatasetAsColumns.AdjClose = closePrices
+	issue.DatasetAsColumns.AdjOpen = openPrices
+	result := TradeAddStop(trade, 0.75, 15, issue)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 2: Long trade, stop triggered
+	trade = []int{cls, cls, lby, lby, lby, cls, cls}
+	closePrices = []float64{1.0, 1.0, 1.0, 1.1, 0.8, 0.8, 0.8}
+	openPrices = []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	issue.DatasetAsColumns.AdjClose = closePrices
+	issue.DatasetAsColumns.AdjOpen = openPrices
+	result = TradeAddStop(trade, 0.75, 15, issue)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 3: Long trade, stop triggered with delay
+	trade = []int{cls, cls, lby, lby, lby, lby, lby, lby, lby, lby, lby, lby, lby, lby, lby, lby, lby}
+	closePrices = []float64{1.0, 1.0, 1.0, 1.1, 0.8, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	openPrices = []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	issue.DatasetAsColumns.AdjClose = closePrices
+	issue.DatasetAsColumns.AdjOpen = openPrices
+	result = TradeAddStop(trade, 0.75, 5, issue)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 4: Short trade, no stop triggered
+	trade = []int{cls, cls, ssl, ssl, ssl, cls, cls}
+	closePrices = []float64{1.0, 1.0, 1.0, 0.9, 0.8, 0.8, 0.8}
+	openPrices = []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	issue = downloader.Issue{}
+	issue.DatasetAsColumns.AdjClose = closePrices
+	issue.DatasetAsColumns.AdjOpen = openPrices
+	result = TradeAddStop(trade, 0.75, 15, issue)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 5: Short trade, stop triggered
+	trade = []int{cls, cls, ssl, ssl, ssl, cls, cls}
+	closePrices = []float64{1.0, 1.0, 1.0, 0.8, 1.2, 1.2, 1.2}
+	openPrices = []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	issue.DatasetAsColumns.AdjClose = closePrices
+	issue.DatasetAsColumns.AdjOpen = openPrices
+	result = TradeAddStop(trade, 0.75, 15, issue)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 6: Short trade, stop triggered with delay
+	trade = []int{cls, cls, ssl, ssl, ssl, ssl, ssl, ssl, ssl, ssl, ssl, ssl, ssl, ssl, ssl, ssl, ssl}
+	closePrices = []float64{1.0, 1.0, 1.0, 0.9, 1.3, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	openPrices = []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	issue.DatasetAsColumns.AdjClose = closePrices
+	issue.DatasetAsColumns.AdjOpen = openPrices
+	result = TradeAddStop(trade, 0.75, 5, issue)
+	fmt.Printf("%+v\n", result)
+
+	// Output:
+	// [0 0 1 1 1 0 0]
+	// [0 0 1 1 0 0 0]
+	// [0 0 1 1 0 0 0 0 0 0 1 1 1 1 1 1 1]
+	// [0 0 -1 -1 -1 0 0]
+	// [0 0 -1 -1 0 0 0]
+	// [0 0 -1 -1 0 0 0 0 0 0 -1 -1 -1 -1 -1 -1 -1]
 }

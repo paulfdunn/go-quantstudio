@@ -33,6 +33,8 @@ type QuantMAH struct {
 	PriceMA              []float64
 	PriceMAHigh          []float64
 	PriceMALow           []float64
+	PriceMAHighShort     []float64
+	PriceMALowShort      []float64
 	Results              quant.Results
 }
 
@@ -60,7 +62,7 @@ func (iss Issue) String() string {
 	return string(jsonh.PrettyJSON(out))
 }
 
-func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLength int, maSplit float64) *Group {
+func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLength int, maSplit float64, maShortShift float64, stopLoss float64, stopLossDelay int, longRebuyChecked, emaChecked bool) *Group {
 	lpf(logh.Info, "calling quant.Run with maLength: %d, maSplit: %5.2f", maLength, maSplit)
 	group := Group{Name: downloaderGroup.Name}
 	group.Issues = make([]Issue, len(downloaderGroup.Issues))
@@ -73,32 +75,44 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 		// Dont use the looping variable in a "i,v" style for loop as
 		// the variable is pointing to a pointer
 		group.Issues[index] = Issue{DownloaderIssue: &downloaderGroup.Issues[index]}
-		group.Issues[index] = UpdateIssue(group.Issues[index].DownloaderIssue, maLength, maSplit)
+		group.Issues[index] = UpdateIssue(group.Issues[index].DownloaderIssue, maLength, maSplit, maShortShift, stopLoss, stopLossDelay, longRebuyChecked, emaChecked)
 	}
 
 	return &group
 }
 
-func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
+func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64, maShortShift float64, stopLoss float64, stopLossDelay int, longRebuyChecked, emaChecked bool) Issue {
 	issDAC := iss.DatasetAsColumns
 	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjClose)
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjHigh)
 	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjLow)
 	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjOpen)
-	// priceMA, err := quant.EMA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
-	priceMA, err := quant.MA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
+	var priceMA []float64
+	var err error
+	if emaChecked {
+		priceMA, err = quant.EMA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
+	} else {
+		priceMA, err = quant.MA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
+	}
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
 	priceMA = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
-	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
 	priceMAHigh := quant.MultiplySlice(1.0+maSplit, priceMA)
-	tradeMA, err := quant.TradeOnSignal(maLength, priceNormalizedClose, priceMAHigh, priceMALow, nil, nil)
+	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
+	shortMAHigh := quant.MultiplySlice(maShortShift, priceMAHigh)
+	shortMALow := quant.MultiplySlice(maShortShift, priceMALow)
+	var rebuy quant.TradeOnSignalLongRebuyInputs
+	if longRebuyChecked {
+		rebuy = quant.TradeOnSignalLongRebuyInputs{DlIssue: iss, AllowedLongRebuys: 3, ConsecutiveUpDays: 7, Stop: 0.95}
+	}
+	tradeMA, err := quant.TradeOnSignal(&rebuy, maLength, priceNormalizedClose, priceMAHigh, priceMALow, shortMALow, shortMAHigh)
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
+	tradeMA = quant.TradeAddStop(tradeMA, stopLoss, stopLossDelay, *iss)
 	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLength, tradeMA, *iss)
 	annualizedGain := quant.AnnualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
 	results := quant.Results{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
@@ -108,6 +122,7 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 			PriceNormalizedHigh: priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,
 			PriceMA:             priceMA, PriceMAHigh: priceMAHigh, PriceMALow: priceMALow,
+			PriceMAHighShort: shortMAHigh, PriceMALowShort: shortMALow,
 			Results: results}}
 }
 
@@ -134,6 +149,34 @@ func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []s
 			lpf(logh.Error, "converting maSplit value '%s' to float", mas)
 			return
 		}
+		mass := r.URL.Query().Get("maShortShift")
+		maShortShift, err := strconv.ParseFloat(mass, 64)
+		if err != nil {
+			lpf(logh.Error, "converting maShortShift value '%s' to int", mass)
+			return
+		}
+		sl := r.URL.Query().Get("stopLoss")
+		stopLoss, err := strconv.ParseFloat(sl, 64)
+		if err != nil {
+			lpf(logh.Error, "converting stopLoss value '%s' to float", sl)
+			return
+		}
+		sld := r.URL.Query().Get("stopLossDelay")
+		stopLossDelay, err := strconv.Atoi(sld)
+		if err != nil {
+			lpf(logh.Error, "converting stopLossDelay value '%s' to int", sld)
+			return
+		}
+		longRebuy := r.URL.Query().Get("longRebuy")
+		longRebuyChecked := false
+		if strings.EqualFold(longRebuy, "true") {
+			longRebuyChecked = true
+		}
+		ema := r.URL.Query().Get("ema")
+		emaChecked := false
+		if strings.EqualFold(ema, "true") {
+			emaChecked = true
+		}
 
 		select {
 		case dlGroup = <-dlGroupChan:
@@ -157,7 +200,7 @@ func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []s
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		iss := UpdateIssue(&dlGroup.Issues[symbolIndex], maLength, maSplit)
+		iss := UpdateIssue(&dlGroup.Issues[symbolIndex], maLength, maSplit, maShortShift, stopLoss, stopLossDelay, longRebuyChecked, emaChecked)
 		if err := plotlyJSON(iss, w); err != nil {
 			lpf(logh.Error, "issue: %s\n%+v", err, iss)
 		}
@@ -211,6 +254,26 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 				"fillcolor": "rgba(0, 140, 8, 0.3)",
 				"line": map[string]interface{}{
 					"color": "rgba(0, 140, 8, 0.5)",
+				},
+			},
+			{
+				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":    qIssue.QuantsetAsColumns.PriceMAHighShort,
+				"name": "MAHighShort",
+				"type": "scatter",
+				// "stackgroup": "one",
+				"line": map[string]interface{}{
+					"color": "rgba(255, 64, 54, 0.19)",
+				},
+			},
+			{
+				"x":    qIssue.DownloaderIssue.DatasetAsColumns.Date,
+				"y":    qIssue.QuantsetAsColumns.PriceMALowShort,
+				"name": "MALowShort",
+				"type": "scatter",
+				// "stackgroup": "one",
+				"line": map[string]interface{}{
+					"color": "rgba(54, 255, 67, 0.19)",
 				},
 			},
 			{
@@ -284,7 +347,7 @@ func plotlyJSON(qIssue Issue, w io.Writer) error {
 			"yaxis2": map[string]interface{}{
 				"title":          fmt.Sprintf("Trade (algorithm:moving average, longBuy=%d, close=%d)", quant.LongBuy, quant.Close),
 				"autorange":      false,
-				"range":          []float64{-1.0, 1.0},
+				"range":          []float64{-1.0, 2.0},
 				"showspikes":     true,
 				"spikemode":      "across",
 				"spikedash":      "solid",
