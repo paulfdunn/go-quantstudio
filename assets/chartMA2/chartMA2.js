@@ -5,9 +5,9 @@ async function updateChartDir() {
     let maShortShift = document.getElementById('maShortShift').value;
     let stopLoss = document.getElementById('stopLoss').value;
     let stopLossDelay = document.getElementById('stopLossDelay').value;
-    let longRebuy = document.getElementById('longRebuy').checked;
+    let longQuickBuy = document.getElementById('longQuickBuy').checked;
     let ema = document.getElementById('ema').checked;
-    let response = await fetch('/plotly-ma2?symbol=' + symbol + '&maLengthLF=' + maLengthLF+ '&maLengthHF=' + maLengthHF + '&maShortShift=' + maShortShift + '&stopLoss=' + stopLoss + '&stopLossDelay=' + stopLossDelay + '&longRebuy=' + longRebuy + '&ema=' + ema);
+    let response = await fetch('/plotly-ma2?symbol=' + symbol + '&maLengthLF=' + maLengthLF+ '&maLengthHF=' + maLengthHF + '&maShortShift=' + maShortShift + '&stopLoss=' + stopLoss + '&stopLossDelay=' + stopLossDelay + '&longQuickBuy=' + longQuickBuy + '&ema=' + ema);
     if (response.status >= 400 && response.status < 600) {
         Plotly.deleteTraces('chartMA2Chart', [0,1,2,3,4,5]);
         tradeHistory.innerHTML = "Server replied with error; likely an invalid symbol.";

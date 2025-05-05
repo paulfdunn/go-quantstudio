@@ -16,7 +16,7 @@ const (
 	MAHShortShiftDefault = 0.8
 	MAHStopLoss          = 0.8
 	MAHStopLossDelay     = 15
-	MAHLongRebuy         = true
+	MAHLongQuickBuy      = true
 	MAHEMA               = false
 	// Update defaults for EMA in chartMA2.js:updateValues()
 	MA2LengthDefaultLF   = 150
@@ -24,7 +24,7 @@ const (
 	MA2ShortShiftDefault = 0.9
 	MA2StopLoss          = 0.8
 	MA2StopLossDelay     = 15
-	MA2LongRebuy         = true
+	MA2LongQuickBuy      = true
 	MA2EMA               = false
 
 	// Symbols being added for use in analysis. These symbols will always be downloaded, but only

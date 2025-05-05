@@ -39,7 +39,7 @@
 					margin-top: 0.5em;
 					margin-right: 1em;
 				}
-				#longRebuy {
+				#longQuickBuy {
 					width: 3em;
 					margin-top: 0.5em;
 					margin-right: 1em;
@@ -88,7 +88,7 @@
 			<br />
 			StopLoss: <input id="stopLoss" value="0.8">
 			StopLossDelay: <input id="stopLossDelay" value="15">
-			LongRebuy: <input type="checkbox" id="longRebuy" checked>
+			LongQuickBuy: <input type="checkbox" id="longQuickBuy" checked>
 			EMA: <input type="checkbox" id="ema">
 			<br />
 			<label for="symbols">Loaded symbols</label>
@@ -159,8 +159,8 @@
 		  }
 		});
 
-		var inputLongRebuy = document.getElementById("longRebuy");
-		inputLongRebuy.addEventListener("click", function(event) {
+		var inputLongQuickBuy = document.getElementById("longQuickBuy");
+		inputLongQuickBuy.addEventListener("click", function(event) {
 			document.getElementById("process").click();
 		});
 

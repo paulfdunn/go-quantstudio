@@ -62,7 +62,7 @@ func (iss Issue) String() string {
 	return string(jsonh.PrettyJSON(out))
 }
 
-func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLengthLF int, maLengthHF int, maShortShift float64, stopLoss float64, stopLossDelay int, longRebuyChecked, emaChecked bool) *Group {
+func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLengthLF int, maLengthHF int, maShortShift float64, stopLoss float64, stopLossDelay int, longQuickBuyChecked, emaChecked bool) *Group {
 	lpf(logh.Info, "calling quant.Run with maLengthLF: %d, maLengthHF: %d, maShortShift: %5.2", maLengthLF, maLengthHF, maShortShift)
 	group := Group{Name: downloaderGroup.Name}
 	group.Issues = make([]Issue, len(downloaderGroup.Issues))
@@ -75,13 +75,13 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 		// Dont use the looping variable in a "i,v" style for loop as
 		// the variable is pointing to a pointer
 		group.Issues[index] = Issue{DownloaderIssue: &downloaderGroup.Issues[index]}
-		group.Issues[index] = UpdateIssue(group.Issues[index].DownloaderIssue, maLengthLF, maLengthHF, maShortShift, stopLoss, stopLossDelay, longRebuyChecked, emaChecked)
+		group.Issues[index] = UpdateIssue(group.Issues[index].DownloaderIssue, maLengthLF, maLengthHF, maShortShift, stopLoss, stopLossDelay, longQuickBuyChecked, emaChecked)
 	}
 
 	return &group
 }
 
-func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortShift float64, stopLoss float64, stopLossDelay int, longRebuyChecked, emaChecked bool) Issue {
+func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortShift float64, stopLoss float64, stopLossDelay int, longQuickBuyChecked, emaChecked bool) Issue {
 	issDAC := iss.DatasetAsColumns
 	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjClose)
 	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjHigh)
@@ -111,9 +111,9 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortS
 	// Shifting the low frequency moving average down for short trades makes those
 	// trades "harder" to enter and provides separation between the long and short trades.
 	shortMA := quant.MultiplySlice(maShortShift, priceMALf)
-	var rebuy quant.TradeOnSignalLongRebuyInputs
-	if longRebuyChecked {
-		rebuy = quant.TradeOnSignalLongRebuyInputs{DlIssue: iss, AllowedLongRebuys: 3, ConsecutiveUpDays: 7, Stop: 0.95}
+	var rebuy quant.TradeOnSignalLongQuickBuyInputs
+	if longQuickBuyChecked {
+		rebuy = quant.TradeOnSignalLongQuickBuyInputs{DlIssue: iss, AllowedLongQuickBuys: 3, ConsecutiveUpDays: 7, Stop: 0.95}
 	}
 	tradeMA, err := quant.TradeOnSignal(&rebuy, maLengthLF, priceMAHf, priceMALf, priceMALf, shortMA, shortMA)
 	if err != nil {
@@ -178,10 +178,10 @@ func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []s
 			lpf(logh.Error, "converting stopLossDelay value '%s' to int", sld)
 			return
 		}
-		longRebuy := r.URL.Query().Get("longRebuy")
-		longRebuyChecked := false
-		if strings.EqualFold(longRebuy, "true") {
-			longRebuyChecked = true
+		longQuickBuy := r.URL.Query().Get("longQuickBuy")
+		longQuickBuyChecked := false
+		if strings.EqualFold(longQuickBuy, "true") {
+			longQuickBuyChecked = true
 		}
 		ema := r.URL.Query().Get("ema")
 		emaChecked := false
@@ -210,7 +210,7 @@ func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []s
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		iss := UpdateIssue(&dlGroup.Issues[symbolIndex], maLengthLF, maLengthHF, maShortShift, stopLoss, stopLossDelay, longRebuyChecked, emaChecked)
+		iss := UpdateIssue(&dlGroup.Issues[symbolIndex], maLengthLF, maLengthHF, maShortShift, stopLoss, stopLossDelay, longQuickBuyChecked, emaChecked)
 		if err := plotlyJSON(iss, w); err != nil {
 			lpf(logh.Error, "issue: %s\n%+v", err, iss)
 		}

@@ -17,20 +17,20 @@ type Results struct {
 	TradeGainVsTime []float64
 }
 
-type TradeOnSignalLongRebuyInputs struct {
-	DlIssue           *downloader.Issue
-	AllowedLongRebuys int
-	ConsecutiveUpDays int
-	Stop              float64
+type TradeOnSignalLongQuickBuyInputs struct {
+	DlIssue              *downloader.Issue
+	AllowedLongQuickBuys int
+	ConsecutiveUpDays    int
+	Stop                 float64
 }
 
 const (
 	DateFormat = "2006-01-02"
 
-	LongRebuy = 2
-	LongBuy   = 1
-	Close     = 0
-	ShortSell = -1
+	LongQuickBuy = 2
+	LongBuy      = 1
+	Close        = 0
+	ShortSell    = -1
 
 	// TradeGap is the minimum number of points between trades. Settlement time is 1 days
 	// so 1 is used to insure another trade is not opened until the previous one is settled.
@@ -315,8 +315,8 @@ func SumSlices(dataSlices ...[]float64) ([]float64, error) {
 	return out, nil
 }
 
-// TradeGain takes in input slice trade with values [LongRebuy, LongBuy, Close, ShortSell], and after delay number of points,
-// applies the [LongRebuy, LongBuy, Close, ShortSell] signals to dlIssue to proces a tradeHistory, gain (total gain), and
+// TradeGain takes in input slice trade with values [LongQuickBuy, LongBuy, Close, ShortSell], and after delay number of points,
+// applies the [LongQuickBuy, LongBuy, Close, ShortSell] signals to dlIssue to proces a tradeHistory, gain (total gain), and
 // tradeGain (accumulated gain/loss at each point).
 // All trades MUST Close between either a LongBuy or a ShortSell.
 func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory string, gain float64, tradeGain []float64) {
@@ -429,21 +429,21 @@ func TradeGain(delay int, trade []int, dlIssue downloader.Issue) (tradeHistory s
 }
 
 // TradeOnSignal delays delay number of points, then compares signal to the buyLevel and sellLevel,
-// and returns an output slice indicating [LongRebuy, LongBuy, Close, ShortSell] at
+// and returns an output slice indicating [LongQuickBuy, LongBuy, Close, ShortSell] at
 // each point. Note that Close is returned for the first delay number of points.
 // It is invalid for a both a long and short trade to be open at the same time.
-// TradeOnSignalLongRebuyInputs is used to enable re-buy on long trades. This is useful for
-// getting back into a trade that rapidly turns around. The only requirement is that
-// consecutiveUpDays >= rebuyInputs.ConsecutiveUpDays. The only transition from LongRebuy is to
+// TradeOnSignalLongQuickBuyInputs is used to enable quick buy on long trades. This is useful for
+// getting into a long trade on rapid upward movement. The only requirement is that
+// consecutiveUpDays >= rebuyInputs.ConsecutiveUpDays. The only transition from LongQuickBuy is to
 // LongBuy (the signal ultimately exceeds the longBuyLevel), or the stop is hit and the trade is closed.
-func TradeOnSignal(rebuyInputs *TradeOnSignalLongRebuyInputs, delay int, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel []float64) ([]int, error) {
-	// longRebuyEnabled is an attempt to get back in sooner in the event of a sudden direction change.
-	longRebuyEnabled := false
+func TradeOnSignal(rebuyInputs *TradeOnSignalLongQuickBuyInputs, delay int, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel []float64) ([]int, error) {
+	// longQuickBuyEnabled is an attempt to get back in sooner in the event of a sudden direction change.
+	longQuickBuyEnabled := false
 	if rebuyInputs != nil && rebuyInputs.DlIssue != nil {
-		longRebuyEnabled = true
+		longQuickBuyEnabled = true
 	}
 
-	if longRebuyEnabled {
+	if longQuickBuyEnabled {
 		if err := SlicesAreEqualLength(signal, rebuyInputs.DlIssue.DatasetAsColumns.AdjClose, rebuyInputs.DlIssue.DatasetAsColumns.AdjOpen); err != nil {
 			lpf(logh.Error, "%+v", err)
 			return nil, err
@@ -455,17 +455,17 @@ func TradeOnSignal(rebuyInputs *TradeOnSignalLongRebuyInputs, delay int, signal,
 	}
 
 	consecutiveUpDays := 0
-	longRebuys := 0
+	longQuickBuys := 0
 	seriesLen := 0
-	if longRebuyEnabled {
+	if longQuickBuyEnabled {
 		seriesLen = len(rebuyInputs.DlIssue.DatasetAsColumns.AdjClose)
 	}
 	out := make([]int, len(signal))
 	out[0] = Close
 	gap := 0
-	longRebuyPrice := 0.0
+	longQuickBuyPrice := 0.0
 	for i := 1; i < len(signal); i++ {
-		if longRebuyEnabled && rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i] > rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i-1] {
+		if longQuickBuyEnabled && rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i] > rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i-1] {
 			consecutiveUpDays++
 		} else {
 			consecutiveUpDays = 0
@@ -484,19 +484,19 @@ func TradeOnSignal(rebuyInputs *TradeOnSignalLongRebuyInputs, delay int, signal,
 			out[i] = LongBuy
 		case out[i-1] == LongBuy && longSellLevel != nil && signal[i] < longSellLevel[i]:
 			out[i] = Close
-			longRebuys = 0
-		case longRebuyEnabled && out[i-1] == LongRebuy && rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i] < longRebuyPrice*rebuyInputs.Stop:
+			longQuickBuys = 0
+		case longQuickBuyEnabled && out[i-1] == LongQuickBuy && rebuyInputs.DlIssue.DatasetAsColumns.AdjClose[i] < longQuickBuyPrice*rebuyInputs.Stop:
 			out[i] = Close
 		case !(out[i-1] >= LongBuy) && shortSellLevel != nil && signal[i] < shortSellLevel[i]:
 			out[i] = ShortSell
 		case out[i-1] <= ShortSell && shortBuyLevel != nil && signal[i] > shortBuyLevel[i]:
 			out[i] = Close
-		case longRebuyEnabled && longRebuys < rebuyInputs.AllowedLongRebuys && !(out[i-1] >= LongBuy || out[i-1] == ShortSell) &&
+		case longQuickBuyEnabled && longQuickBuys < rebuyInputs.AllowedLongQuickBuys && !(out[i-1] >= LongBuy || out[i-1] == ShortSell) &&
 			consecutiveUpDays >= rebuyInputs.ConsecutiveUpDays:
-			out[i] = LongRebuy
-			longRebuys++
+			out[i] = LongQuickBuy
+			longQuickBuys++
 			if i < seriesLen-1 {
-				longRebuyPrice = rebuyInputs.DlIssue.DatasetAsColumns.AdjOpen[i+1]
+				longQuickBuyPrice = rebuyInputs.DlIssue.DatasetAsColumns.AdjOpen[i+1]
 			}
 		default:
 			if i > 0 {

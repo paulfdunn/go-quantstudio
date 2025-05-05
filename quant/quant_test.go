@@ -326,7 +326,7 @@ func Example_tradeOnSignal() {
 	signal = []float64{1.2, 1.2, 0.9, 0.91, 0.92, 1.2, 1.2, 1.2}
 	iss.DatasetAsColumns.AdjClose = signal
 	iss.DatasetAsColumns.AdjOpen = signal
-	rebuy := TradeOnSignalLongRebuyInputs{DlIssue: &iss, AllowedLongRebuys: 1, ConsecutiveUpDays: 2, Stop: 0.95}
+	rebuy := TradeOnSignalLongQuickBuyInputs{DlIssue: &iss, AllowedLongQuickBuys: 1, ConsecutiveUpDays: 2, Stop: 0.95}
 	result, _ = TradeOnSignal(&rebuy, delay, signal, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
@@ -336,7 +336,7 @@ func Example_tradeOnSignal() {
 	signalOpen := []float64{1.2, 1.2, 0.9, 0.91, 0.92, 0.92, 0.8, 0.8}
 	iss.DatasetAsColumns.AdjClose = signalClose
 	iss.DatasetAsColumns.AdjOpen = signalOpen
-	rebuy = TradeOnSignalLongRebuyInputs{DlIssue: &iss, AllowedLongRebuys: 1, ConsecutiveUpDays: 2, Stop: 0.95}
+	rebuy = TradeOnSignalLongQuickBuyInputs{DlIssue: &iss, AllowedLongQuickBuys: 1, ConsecutiveUpDays: 2, Stop: 0.95}
 	result, _ = TradeOnSignal(&rebuy, delay, signalClose, longBuyLevel, longSellLevel, shortSellLevel, shortBuyLevel)
 	fmt.Printf("%+v\n", result)
 
