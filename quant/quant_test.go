@@ -383,6 +383,15 @@ func Example_tradeAddStop() {
 	result = TradeAddStop(trade, 0.75, 5, issue)
 	fmt.Printf("%+v\n", result)
 
+	// Test case 3.1: Long trade, stop triggered with delay
+	trade = []int{cls, cls, lby, lby, lby, lby, ssl, ssl, ssl}
+	closePrices = []float64{1.0, 1.0, 1.0, 1.1, 0.8, 0.8, 0.8, 0.8, 0.8}
+	openPrices = []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	issue.DatasetAsColumns.AdjClose = closePrices
+	issue.DatasetAsColumns.AdjOpen = openPrices
+	result = TradeAddStop(trade, 0.75, 5, issue)
+	fmt.Printf("%+v\n", result)
+
 	// Test case 4: Short trade, no stop triggered
 	trade = []int{cls, cls, ssl, ssl, ssl, cls, cls}
 	closePrices = []float64{1.0, 1.0, 1.0, 0.9, 0.8, 0.8, 0.8}
@@ -411,11 +420,22 @@ func Example_tradeAddStop() {
 	result = TradeAddStop(trade, 0.75, 5, issue)
 	fmt.Printf("%+v\n", result)
 
+	// Test case 6.1: Long trade, stop triggered with delay
+	trade = []int{cls, cls, ssl, ssl, ssl, ssl, lby, lby, lby}
+	closePrices = []float64{1.0, 1.0, 1.0, 0.8, 1.2, 1.2, 1.2, 1.2, 1.2}
+	openPrices = []float64{1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0}
+	issue.DatasetAsColumns.AdjClose = closePrices
+	issue.DatasetAsColumns.AdjOpen = openPrices
+	result = TradeAddStop(trade, 0.75, 5, issue)
+	fmt.Printf("%+v\n", result)
+
 	// Output:
 	// [0 0 1 1 1 0 0]
 	// [0 0 1 1 0 0 0]
 	// [0 0 1 1 0 0 0 0 0 0 1 1 1 1 1 1 1]
+	// [0 0 1 1 0 0 -1 -1 -1]
 	// [0 0 -1 -1 -1 0 0]
 	// [0 0 -1 -1 0 0 0]
 	// [0 0 -1 -1 0 0 0 0 0 0 -1 -1 -1 -1 -1 -1 -1]
+	// [0 0 -1 -1 0 0 1 1 1]
 }

@@ -523,11 +523,17 @@ func TradeAddStop(trade []int, stopLoss float64, stopLossDelay int, dlIssue down
 	stopTriggeredIndex := 0
 	for i := 1; i < len(trade); i++ {
 		if stopTriggered {
-			tradeOut[i] = Close
-			if i >= stopTriggeredIndex+stopLossDelay {
+			// If a stop was triggered, don't prevent a long-> short or short -> long transition.
+			if (trade[stopTriggeredIndex] >= LongBuy && trade[i] <= ShortSell) ||
+				(trade[stopTriggeredIndex] <= ShortSell && trade[i] >= LongBuy) {
 				stopTriggered = false
+			} else {
+				tradeOut[i] = Close
+				if i >= stopTriggeredIndex+stopLossDelay {
+					stopTriggered = false
+				}
+				continue
 			}
-			continue
 		}
 
 		switch {
