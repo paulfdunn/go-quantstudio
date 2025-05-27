@@ -26,7 +26,8 @@ type Issue struct {
 }
 
 type QuantMA2 struct {
-	Direction            []int
+	Direction []int
+	// DirectionMA          []float64
 	PriceNormalizedClose []float64
 	PriceNormalizedHigh  []float64
 	PriceNormalizedLow   []float64
@@ -122,13 +123,15 @@ func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortS
 	}
 	tradeMA = quant.TradeAddStop(tradeMA, stopLoss, stopLossDelay, *iss)
 	dir := quant.ConsecutiveDirection(iss.DatasetAsColumns.Close)
+	// dirMA, _ := quant.MA(10, true, quant.IntSliceToFloatSlice(quant.Direction(iss.DatasetAsColumns.Close)))
 	tradeHistory, totalGain, tradeGainVsTime := quant.TradeGain(maLengthLF, tradeMA, *iss)
 	annualizedGain := quant.AnnualizedGain(totalGain, issDAC.Date[0], issDAC.Date[len(issDAC.Date)-1])
 	results := quant.Results{AnnualizedGain: annualizedGain, TotalGain: totalGain, TradeHistory: tradeHistory,
 		Trade: tradeMA, TradeGainVsTime: tradeGainVsTime}
 	return Issue{DownloaderIssue: iss,
 		QuantsetAsColumns: QuantMA2{
-			Direction:            dir,
+			Direction: dir,
+			// DirectionMA:          dirMA,
 			PriceNormalizedClose: priceNormalizedClose,
 			PriceNormalizedHigh:  priceNormalizedHigh, PriceNormalizedLow: priceNormalizedLow,
 			PriceNormalizedOpen: priceNormalizedOpen,

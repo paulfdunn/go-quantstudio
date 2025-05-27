@@ -86,44 +86,46 @@ func urlCollectionDataToGroup(urlData []httph.URLCollectionData, urlSymbolMap ma
 			return nil, errors.New("zero length data")
 		}
 
-		// urlCollectionDataHeaderIndicesMap, err := mapURLCollectionDataHeaderIndices(records[0])
-		// if err != nil {
-		// 	lpf(logh.Error, "could not get column indices from raw data, error:%s", err)
-		// 	return nil, err
-		// }
-
-		// orderAsc, dateFirst, dateLast := dl.URLCollectionDataDateOrder(records, urlCollectionDataHeaderIndicesMap)
-		// data := urlCollectionDataToStructure(symbol, records, urlCollectionDataHeaderIndicesMap, orderAsc)
-
 		yfcLen := len(yfc.Chart.Result[0].Timestamp)
-		Date := make([]time.Time, yfcLen)
-		Open := make([]float64, yfcLen)
-		High := make([]float64, yfcLen)
-		Low := make([]float64, yfcLen)
-		Close := make([]float64, yfcLen)
-		Volume := make([]float64, yfcLen)
-		AdjOpen := make([]float64, yfcLen)
-		AdjHigh := make([]float64, yfcLen)
-		AdjLow := make([]float64, yfcLen)
-		AdjClose := make([]float64, yfcLen)
-		AdjVolume := make([]float64, yfcLen)
+		Date := make([]time.Time, 0, yfcLen)
+		Open := make([]float64, 0, yfcLen)
+		High := make([]float64, 0, yfcLen)
+		Low := make([]float64, 0, yfcLen)
+		Close := make([]float64, 0, yfcLen)
+		Volume := make([]float64, 0, yfcLen)
+		AdjOpen := make([]float64, 0, yfcLen)
+		AdjHigh := make([]float64, 0, yfcLen)
+		AdjLow := make([]float64, 0, yfcLen)
+		AdjClose := make([]float64, 0, yfcLen)
+		AdjVolume := make([]float64, 0, yfcLen)
 		datasetAsColumns := dl.DatasetAsColumns{
 			Date: Date, Open: Open, High: High, Low: Low, Close: Close, Volume: Volume,
 			AdjOpen: AdjOpen, AdjHigh: AdjHigh, AdjLow: AdjLow, AdjClose: AdjClose, AdjVolume: AdjVolume}
 		dateFirst := time.Unix(int64(yfc.Chart.Result[0].Timestamp[0]), 0)
 		dateLast := time.Unix(int64(yfc.Chart.Result[0].Timestamp[yfcLen-1]), 0)
 		for i := 0; i < yfcLen; i++ {
-			datasetAsColumns.Date[i] = time.Unix(int64(yfc.Chart.Result[0].Timestamp[i]), 0)
-			datasetAsColumns.Open[i] = yfc.Chart.Result[0].Indicators.Quote[0].Open[i]
-			datasetAsColumns.High[i] = yfc.Chart.Result[0].Indicators.Quote[0].High[i]
-			datasetAsColumns.Low[i] = yfc.Chart.Result[0].Indicators.Quote[0].Low[i]
-			datasetAsColumns.Close[i] = yfc.Chart.Result[0].Indicators.Quote[0].Close[i]
-			datasetAsColumns.Volume[i] = float64(yfc.Chart.Result[0].Indicators.Quote[0].Volume[i])
+			date := time.Unix(int64(yfc.Chart.Result[0].Timestamp[i]), 0)
+			if yfc.Chart.Result[0].Indicators.Quote[0].Open[i] == 0 {
+				// Some issues have weekend and holiday dates with price data that is all zeros.
+				if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
+					continue
+				}
+				// Print is noisy for ^tnx - only print for debugging.
+				// lpf(logh.Warning, "Open is zero on weekday (may be holiday), symbol: %s, date: %s", symbol, date)
+				continue
+			}
+			datasetAsColumns.Date = append(datasetAsColumns.Date, time.Unix(int64(yfc.Chart.Result[0].Timestamp[i]), 0))
+			datasetAsColumns.Open = append(datasetAsColumns.Open, yfc.Chart.Result[0].Indicators.Quote[0].Open[i])
+			datasetAsColumns.High = append(datasetAsColumns.High, yfc.Chart.Result[0].Indicators.Quote[0].High[i])
+			datasetAsColumns.Low = append(datasetAsColumns.Low, yfc.Chart.Result[0].Indicators.Quote[0].Low[i])
+			datasetAsColumns.Close = append(datasetAsColumns.Close, yfc.Chart.Result[0].Indicators.Quote[0].Close[i])
+			datasetAsColumns.Volume = append(datasetAsColumns.Volume, float64(yfc.Chart.Result[0].Indicators.Quote[0].Volume[i]))
 			adj := yfc.Chart.Result[0].Indicators.AdjClose[0].AdjClose[i] / yfc.Chart.Result[0].Indicators.Quote[0].Close[i]
-			datasetAsColumns.AdjOpen[i] = mathh.Round(yfc.Chart.Result[0].Indicators.Quote[0].Open[i]*adj, dl.InputPrecision)
-			datasetAsColumns.AdjHigh[i] = mathh.Round(yfc.Chart.Result[0].Indicators.Quote[0].High[i]*adj, dl.InputPrecision)
-			datasetAsColumns.AdjLow[i] = mathh.Round(yfc.Chart.Result[0].Indicators.Quote[0].Low[i]*adj, dl.InputPrecision)
-			datasetAsColumns.AdjClose[i] = mathh.Round(yfc.Chart.Result[0].Indicators.AdjClose[0].AdjClose[i], dl.InputPrecision)
+			datasetAsColumns.AdjOpen = append(datasetAsColumns.AdjOpen, mathh.Round(yfc.Chart.Result[0].Indicators.Quote[0].Open[i]*adj, dl.InputPrecision))
+			datasetAsColumns.AdjHigh = append(datasetAsColumns.AdjHigh, mathh.Round(yfc.Chart.Result[0].Indicators.Quote[0].High[i]*adj, dl.InputPrecision))
+			datasetAsColumns.AdjLow = append(datasetAsColumns.AdjLow, mathh.Round(yfc.Chart.Result[0].Indicators.Quote[0].Low[i]*adj, dl.InputPrecision))
+			datasetAsColumns.AdjClose = append(datasetAsColumns.AdjClose, mathh.Round(yfc.Chart.Result[0].Indicators.AdjClose[0].AdjClose[i], dl.InputPrecision))
+			datasetAsColumns.AdjVolume = append(datasetAsColumns.AdjVolume, 0)
 		}
 
 		issue := dl.Issue{Symbol: symbol, URL: ucd.URL, DatasetAsColumns: datasetAsColumns}

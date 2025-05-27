@@ -102,6 +102,21 @@ func Differentiate(input []float64) []float64 {
 	return out
 }
 
+// Direction will return the direction of the input slice.
+func Direction(input []float64) []int {
+	out := make([]int, len(input))
+	for i := 1; i < len(input); i++ {
+		if input[i] == input[i-1] {
+			out[i] = 0
+		} else if input[i] > input[i-1] {
+			out[i] = 1
+		} else if input[i] < input[i-1] {
+			out[i] = -1
+		}
+	}
+	return out
+}
+
 // EMA is the exponential moving average of the dataSlices.
 // If biasStart==true the initial points of the series are filled with the value
 // of the MA on the first point after length points.
@@ -147,6 +162,15 @@ func EMA(length int, biasStart bool, dataSlices ...[]float64) ([]float64, error)
 	}
 
 	return out, nil
+}
+
+// IntSliceToFloatSlice will convert an input slice of integers to a slice of floats.
+func IntSliceToFloatSlice(input []int) []float64 {
+	out := make([]float64, len(input))
+	for i := 0; i < len(input); i++ {
+		out[i] = float64(input[i])
+	}
+	return out
 }
 
 // MarketClosedGain will return the cummulative gain for an issue that is only held during market close.

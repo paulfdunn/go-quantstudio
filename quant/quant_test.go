@@ -63,6 +63,40 @@ func Example_differentiate() {
 	// [0 0 0 1 -1 0 -1 1 0]
 }
 
+func Example_direction() {
+	// Test case 1: Increasing values
+	input := []float64{1.0, 2.0, 3.0, 4.0, 5.0}
+	result := Direction(input)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 2: Decreasing values
+	input = []float64{5.0, 4.0, 3.0, 2.0, 1.0}
+	result = Direction(input)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 3: Mixed values
+	input = []float64{1.0, 2.0, 2.0, 3.0, 1.0, 1.0, 2.0}
+	result = Direction(input)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 4: Constant values
+	input = []float64{1.0, 1.0, 1.0, 1.0, 1.0}
+	result = Direction(input)
+	fmt.Printf("%+v\n", result)
+
+	// Test case 5: Empty slice
+	input = []float64{}
+	result = Direction(input)
+	fmt.Printf("%+v\n", result)
+
+	// Output:
+	// [0 1 1 1 1]
+	// [0 -1 -1 -1 -1]
+	// [0 1 0 1 -1 0 1]
+	// [0 0 0 0 0]
+	// []
+}
+
 func Example_ema_1() {
 	f1 := make([]float64, 10)
 	f2 := make([]float64, 40)
@@ -100,6 +134,34 @@ func Example_ema_0() {
 
 	// Output:
 	// 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.273, 0.202, 0.150, 0.111, 0.082, 0.061, 0.045, 0.033, 0.025, 0.018, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000, 0.000,
+}
+
+func Example_intSliceToFloatSlice() {
+	// Test case 1: Positive integers
+	input := []int{1, 2, 3, 4, 5}
+	result := IntSliceToFloatSlice(input)
+	fmt.Printf("%3.1f\n", result)
+
+	// Test case 2: Negative integers
+	input = []int{-1, -2, -3, -4, -5}
+	result = IntSliceToFloatSlice(input)
+	fmt.Printf("%3.1f\n", result)
+
+	// Test case 3: Mixed integers
+	input = []int{-1, 0, 1, -2, 2}
+	result = IntSliceToFloatSlice(input)
+	fmt.Printf("%3.1f\n", result)
+
+	// Test case 4: Empty slice
+	input = []int{}
+	result = IntSliceToFloatSlice(input)
+	fmt.Printf("%+v\n", result)
+
+	// Output:
+	// [1.0 2.0 3.0 4.0 5.0]
+	// [-1.0 -2.0 -3.0 -4.0 -5.0]
+	// [-1.0 0.0 1.0 -2.0 2.0]
+	// []
 }
 
 func Example_marketClosedGain_1() {

@@ -31,7 +31,8 @@ type Group struct {
 type Issue struct {
 	Symbol string
 	URL    string
-	// Dataset is row based data, as source data is row based.
+	// Dataset is row based data for data sources in that format; convert to DatasetAsColumns
+	// using ToDatasetAsColumns().
 	Dataset []Data
 	// DatasetAsColumns is column based data as that is sometimes easier to work with.
 	DatasetAsColumns DatasetAsColumns
