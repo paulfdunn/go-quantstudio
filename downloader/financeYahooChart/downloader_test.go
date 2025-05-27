@@ -30,7 +30,7 @@ func ExampleNewGroup() {
 	// to download data and get a Group returned for that data, or set the value to false
 	// to reprocess previously downloaded data.
 
-	liveData := true
+	liveData := false
 	group, err := NewGroup(liveData, testDataFilePath, "testGroup", testSymbols)
 	if err != nil {
 		var t *testing.T
