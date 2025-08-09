@@ -1,4 +1,4 @@
-async function updateChartDir() {
+async function updateChartMA2() {
     let symbol = document.getElementById('symbol').value;
     let maLengthLF = document.getElementById('maLengthLF').value;
     let maLengthHF = document.getElementById('maLengthHF').value;
@@ -30,6 +30,7 @@ async function updateValues() {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('process').onclick = updateChartDir;
+    document.getElementById('process').onclick = updateChartMA2;
     document.getElementById('ema').onclick = updateValues;
+    document.getElementById('downloadData').onclick = downloadData;
 });

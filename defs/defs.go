@@ -54,7 +54,7 @@ const (
 	// SSO ProShares Ultra S&P500
 	// Triple ETFs below
 	// TQQQ ProShares UltraPro QQQ
-	TradingSymbolsDefault = "^tnx,dia,idev,iefa,intf,psq,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq"
+	TradingSymbolsDefault = "^tnx,dia,idev,iefa,intf,psq,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq,emhy,shyg,hdv,schd"
 	// testing only
 	// TradingSymbolsDefault = "dia,ioo,qqq,spy,vt"
 )
@@ -62,9 +62,7 @@ const (
 // Bond options for when stocks aren't so great.
 
 // Ultrashort Bond
-// BIL SPDR BLOOMBERG 1-3 MONTH T-BILL ETF
 // FLOT ISHARES FLOATING RATE BOND ETF
-// JPST JPMORGAN ULTRA-SHORT INCOME ETF
 //
 // Short-Term Inflation Protected Bond
 // STIP ISHARES 0-5 YEAR TIPS BOND ETF
@@ -73,7 +71,12 @@ const (
 // VCIT VANGUARD INTERMEDIATE-TERM CORPORATE BOND ETF
 //
 // Emerging Markets Bond
-// EMB ISHARES JP MORGAN USD EMERGING MARKETS BOND ETF
+// EMHY ISHARES J.P. MORGAN EM HIGH YIELD BOND ETF
 //
 // High Yield Bond
+// HYS PIMCO 0-5 YEAR HIGH YIELD CORPORATE BOND INDEX EXCHANGE-TRADEDFUND
 // SHYG ISHARES 0-5 YEAR HIGH YIELD CORPORATE BOND ETF
+//
+// Large Value
+// HDV ISHARES CORE HIGH DIVIDEND ETF (~3.5% yield)
+// SCHD SCHWAB US DIVIDEND EQUITY ETF (~3.8% yield)

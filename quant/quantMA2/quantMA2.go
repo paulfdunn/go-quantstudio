@@ -84,10 +84,10 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 
 func UpdateIssue(iss *downloader.Issue, maLengthLF int, maLengthHF int, maShortShift float64, stopLoss float64, stopLossDelay int, longQuickBuyChecked, emaChecked bool) Issue {
 	issDAC := iss.DatasetAsColumns
-	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjClose)
-	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjHigh)
-	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjLow)
-	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLengthLF], issDAC.AdjOpen)
+	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.Open[maLengthLF], issDAC.Close)
+	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.Open[maLengthLF], issDAC.High)
+	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.Open[maLengthLF], issDAC.Low)
+	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.Open[maLengthLF], issDAC.Open)
 	var priceMALf []float64
 	var err error
 	if emaChecked {

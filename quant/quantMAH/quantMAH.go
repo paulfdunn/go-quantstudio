@@ -83,22 +83,22 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 
 func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64, maShortShift float64, stopLoss float64, stopLossDelay int, longQuickBuyChecked, emaChecked bool) Issue {
 	issDAC := iss.DatasetAsColumns
-	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjClose)
-	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjHigh)
-	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjLow)
-	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjOpen)
+	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.Open[maLength], issDAC.Close)
+	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.Open[maLength], issDAC.High)
+	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.Open[maLength], issDAC.Low)
+	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.Open[maLength], issDAC.Open)
 	var priceMA []float64
 	var err error
 	if emaChecked {
-		priceMA, err = quant.EMA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
+		priceMA, err = quant.EMA(maLength, true, issDAC.Open, issDAC.Close)
 	} else {
-		priceMA, err = quant.MA(maLength, true, issDAC.AdjOpen, issDAC.AdjClose)
+		priceMA, err = quant.MA(maLength, true, issDAC.Open, issDAC.Close)
 	}
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
 	}
-	priceMA = quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], priceMA)
+	priceMA = quant.MultiplySlice(1.0/issDAC.Open[maLength], priceMA)
 	priceMAHigh := quant.MultiplySlice(1.0+maSplit, priceMA)
 	priceMALow := quant.MultiplySlice(1.0-maSplit, priceMA)
 	shortMAHigh := quant.MultiplySlice(maShortShift, priceMAHigh)

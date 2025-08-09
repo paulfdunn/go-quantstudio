@@ -92,11 +92,11 @@ func GetGroup(downloaderGroup *downloader.Group, tradingSymbols []string, maLeng
 
 func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	issDAC := iss.DatasetAsColumns
-	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjClose)
-	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjHigh)
-	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjLow)
-	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.AdjOpen[maLength], issDAC.AdjOpen)
-	gainMarketClosed, err := quant.MarketClosedGain(issDAC.AdjOpen, issDAC.AdjClose)
+	priceNormalizedClose := quant.MultiplySlice(1.0/issDAC.Open[maLength], issDAC.Close)
+	priceNormalizedHigh := quant.MultiplySlice(1.0/issDAC.Open[maLength], issDAC.High)
+	priceNormalizedLow := quant.MultiplySlice(1.0/issDAC.Open[maLength], issDAC.Low)
+	priceNormalizedOpen := quant.MultiplySlice(1.0/issDAC.Open[maLength], issDAC.Open)
+	gainMarketClosed, err := quant.MarketClosedGain(issDAC.Open, issDAC.Close)
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}
@@ -109,7 +109,7 @@ func UpdateIssue(iss *downloader.Issue, maLength int, maSplit float64) Issue {
 	}
 	gainMarketClosedMALow := quant.MultiplySlice(1.0-maSplit, gainMarketClosedMA)
 	gainMarketClosedMAHigh := quant.MultiplySlice(1.0+maSplit, gainMarketClosedMA)
-	gainMarketOpen, err := quant.MarketOpenGain(issDAC.AdjOpen, issDAC.AdjClose)
+	gainMarketOpen, err := quant.MarketOpenGain(issDAC.Open, issDAC.Close)
 	if err != nil {
 		lpf(logh.Error, "symbol: %s, %+v", iss.Symbol, err)
 		return Issue{}

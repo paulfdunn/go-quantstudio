@@ -21,4 +21,5 @@ async function updateChartMAH() {
 
 document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('process').onclick = updateChartMAH;
+    document.getElementById('downloadData').onclick = downloadData;
 });

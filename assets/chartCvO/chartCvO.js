@@ -16,4 +16,5 @@ async function updateChartCvO() {
 
 document.addEventListener('DOMContentLoaded', function () {
     document.getElementById('process').onclick = updateChartCvO;
+    document.getElementById('downloadData').onclick = downloadData;
 });
