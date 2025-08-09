@@ -54,7 +54,7 @@ const (
 	// SSO ProShares Ultra S&P500
 	// Triple ETFs below
 	// TQQQ ProShares UltraPro QQQ
-	TradingSymbolsDefault = "^tnx,dia,idev,iefa,intf,psq,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq,emhy,shyg,hdv,schd"
+	TradingSymbolsDefault = "^tnx,dia,idev,iefa,intf,psq,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq,vcit,emhy,hys,shyg,hdv,schd,vym"
 	// testing only
 	// TradingSymbolsDefault = "dia,ioo,qqq,spy,vt"
 )
@@ -73,10 +73,13 @@ const (
 // Emerging Markets Bond
 // EMHY ISHARES J.P. MORGAN EM HIGH YIELD BOND ETF
 //
-// High Yield Bond
+// High Yield Bond - (!These have secular declines!)
 // HYS PIMCO 0-5 YEAR HIGH YIELD CORPORATE BOND INDEX EXCHANGE-TRADEDFUND
 // SHYG ISHARES 0-5 YEAR HIGH YIELD CORPORATE BOND ETF
 //
 // Large Value
 // HDV ISHARES CORE HIGH DIVIDEND ETF (~3.5% yield)
 // SCHD SCHWAB US DIVIDEND EQUITY ETF (~3.8% yield)
+//
+// High dividend yield
+// VYM VANGUARD HIGH DIVIDEND YIELD INDEX ETF
