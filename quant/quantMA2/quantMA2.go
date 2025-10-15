@@ -197,7 +197,7 @@ func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []s
 			lp(logh.Debug, "using previously downloaded data")
 		}
 		if !slices.Contains(trdSymbols, urlSymbol) {
-			lpf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", urlSymbol)
+			lpf(logh.Warning, "Symbol %s was not found in the symbolCSVList.", urlSymbol)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
@@ -209,7 +209,7 @@ func WrappedPlotlyHandler(dlGroupChan chan *downloader.Group, tradingSymbols []s
 			}
 		}
 		if symbolIndex == -1 {
-			lpf(logh.Warning, "Symbol %s was not found in existing data. Re-run with this symbol in the symbolCSVList.", urlSymbol)
+			lpf(logh.Warning, "Symbol %s is in the symbolCSVList but there is no matching Issue in dlGroup.Issues.", urlSymbol)
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}

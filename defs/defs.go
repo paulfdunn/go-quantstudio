@@ -38,6 +38,7 @@ const (
 	// Symbols for trading
 	//
 	// DIA (0.16%) SPDR Dow Jones Industrial Average ETF Trust
+	// IAU (0.25%) iShares Gold Trust
 	// IDEV (0.04%) iShares Core MSCI International Developed Markets ETF (large-, mid- and small-capitalization developed market equities, excluding the United States)
 	// IEFA (0.07%) iShares Core MSCI EAFE ETF large-, mid- and small-capitalization developed market equities, excluding the U.S. and Canada. (Not currency hedged; HEFA is the equivalent ETF hedged in USD.)
 	// INTF (0.16%) ISHARES INTERNATIONAL EQUITY FACTOR ETF - track the investment results of the STOXX International Equity Factor Index
@@ -54,7 +55,7 @@ const (
 	// SSO ProShares Ultra S&P500
 	// Triple ETFs below
 	// TQQQ ProShares UltraPro QQQ
-	TradingSymbolsDefault = "^tnx,dia,idev,iefa,intf,psq,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq,vcit,emhy,hys,shyg,hdv,schd,vym"
+	TradingSymbolsDefault = "^tnx,dia,iau,idev,iefa,intf,psq,qqq,qqqm,rsp,spy,vgt,vt,ddm,qld,sso,tqqq,flot,stip,vcit,vcsh,emb,emhy,bnd,hdv,schd,vym,hdef,shyg"
 	// testing only
 	// TradingSymbolsDefault = "dia,ioo,qqq,spy,vt"
 )
@@ -68,14 +69,15 @@ const (
 // STIP ISHARES 0-5 YEAR TIPS BOND ETF
 //
 // Corporate Bond
-// VCIT VANGUARD INTERMEDIATE-TERM CORPORATE BOND ETF
+// VCIT VANGUARD INTERMEDIATE-TERM (5-10 years) CORPORATE BOND ETF
+// VCSH VANGUARD SHORT-TERM (1-5 years) CORPORATE BOND ETF
 //
 // Emerging Markets Bond
+// EMB iShares JPM USD Emerging Market Bond
 // EMHY ISHARES J.P. MORGAN EM HIGH YIELD BOND ETF
 //
-// High Yield Bond - (!These have secular declines!)
-// HYS PIMCO 0-5 YEAR HIGH YIELD CORPORATE BOND INDEX EXCHANGE-TRADEDFUND
-// SHYG ISHARES 0-5 YEAR HIGH YIELD CORPORATE BOND ETF
+// Total bond market
+// BND Vanguard Total Bond Market ETF
 //
 // Large Value
 // HDV ISHARES CORE HIGH DIVIDEND ETF (~3.5% yield)
@@ -83,3 +85,13 @@ const (
 //
 // High dividend yield
 // VYM VANGUARD HIGH DIVIDEND YIELD INDEX ETF
+// HDEF Xtrackers MSCI EAFE High Dividend Yield
+// SHYG ISHARES 0-5 YEAR HIGH YIELD CORPORATE BOND ETF
+//
+// E*TRADE Prebuilt Income Portfolios
+// VYM Vanguard High Dividend ETF
+// HDEF Xtrackers MSCI EAFE High Dividend Yield
+// BND Vanguard Total Bond Market ETF
+// VCIT Vanguard Intermediate Term (5-10 years) Corporate Bond
+// EMB iShares JPM USD Emerging Market Bond
+// vym hdef bnd vcit emb
